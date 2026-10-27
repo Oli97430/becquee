@@ -49,17 +49,18 @@ A 3D-printed camera bird feeder + a Windows app that records, recognizes and lea
 
 ```mermaid
 flowchart LR
-    A[Camera<br>webcam or smartphone] --> B{Motion?}
-    B -- yes --> C[MP4 clip<br>+3 s before]
-    C --> D{Bird?<br>YOLOS-tiny, then BioCLIP}
-    D -- no --> X[Clip deleted]
-    D -- yes --> E[Cropped bird]
-    E --> F[BioCLIP<br>local iNaturalist species<br>+ your corrections]
-    M[Microphone] --> G[BirdNET<br>+ learned songs]
-    F --> H[Vote over the whole visit]
+    A["Camera<br/>webcam or smartphone"] --> B{"Motion?"}
+    B -->|yes| C["MP4 clip<br/>with 3 s before"]
+    C --> D{"Bird?<br/>YOLOS-tiny then BioCLIP"}
+    D -->|no| X["Clip deleted"]
+    D -->|yes| E["Cropped bird"]
+    E --> F["BioCLIP<br/>local iNaturalist species<br/>and your corrections"]
+    M["Microphone"] --> G["BirdNET<br/>and learned songs"]
+    F --> H["Vote over the whole visit"]
     G --> H
-    H --> I[Log, photo,<br>statistics]
-    I -. right-click .-> J[Correction] -. learning .-> F
+    H --> I["Log, photo,<br/>statistics"]
+    I -.->|right-click| J["Correction"]
+    J -.->|learning| F
 ```
 
 - **Local list**: from the feeder's location, Becquée downloads the species observed (iNaturalist research-grade observations) within 50 km, widened to 200 then 1,000 km in poorly surveyed regions. It is cached for 30 days; offline, BirdNET's geographic model takes over.
