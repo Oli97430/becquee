@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onglet_direct">Live</string>
+    <string name="onglet_visites">Besuche</string>
+    <string name="onglet_reglages">Einstellungen</string>
+    <string name="demarrer">Kamera starten</string>
+    <string name="arreter">Stoppen</string>
+    <string name="analyser_video">Video analysieren</string>
+    <string name="aucune_image">Kamera starten und auf das Futterhaus richten.</string>
+    <string name="aucune_visite">Noch keine Besuche.</string>
+    <string name="nb_visites">%1$d Besuche, %2$d Arten</string>
+    <string name="corriger">Korrigieren</string>
+    <string name="corriger_titre">Welche Art?</string>
+    <string name="rechercher">Suchen</string>
+    <string name="annuler">Abbrechen</string>
+    <string name="inconnu">Unbekannt</string>
+    <string name="pas_un_oiseau">Kein Vogel</string>
+    <string name="position_titre">Standort des Futterhauses</string>
+    <string name="position_aide">Bestimmt die möglichen Arten (auf iNaturalist im Umkreis von 50 km beobachtet). Offline: letzte bekannte Liste, sonst BirdNET.</string>
+    <string name="ma_position">Meinen Standort verwenden</string>
+    <string name="seuil">Konfidenzschwelle: %1$d %%</string>
+    <string name="surface">Mindestgröße der Bewegung: %1$s %% des Bildes</string>
+    <string name="filtre_oiseaux">Clips ohne Vogel löschen</string>
+    <string name="dossier">Clips und Protokoll: %1$s</string>
+    <string name="notification_surveillance">Futterhaus wird überwacht</string>
+    <string name="chargement_modeles">Modelle werden geladen…</string>
+    <string name="source_ouverte">Quelle geöffnet: %1$dx%2$d mit %3$d B/s</string>
+    <string name="source_erreur">Fehler: %1$s</string>
+    <string name="debut_enregistrement">Bewegung: Aufnahme gestartet</string>
+    <string name="sans_oiseau">Bewegung ohne Vogel (%1$d s): Clip gelöscht</string>
+    <string name="fin_visite">Besuch beendet: %1$s (%2$d %%), %3$d s</string>
+    <string name="especes_locales">Lokale Arten: %1$d (iNaturalist, Umkreis %2$d km)</string>
+    <string name="especes_hors_ligne">iNaturalist-Liste nicht verfügbar (%1$s): BirdNET-Liste</string>
+    <string name="analyse_terminee">Videoanalyse abgeschlossen</string>
+    <string name="slogan">das Futterhaus, das seine Besucher erkennt</string>
+</resources>

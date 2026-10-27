@@ -19,3 +19,14 @@ Becquee_build/
 *.tmp
 Thumbs.db
 desktop.ini
+
+# Android (modèles produits par android/conversion/convertir_modeles.py, trop gros pour git)
+android/app/src/main/assets/modeles/
+android/conversion/cache/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.apk
+android/.kotlin/

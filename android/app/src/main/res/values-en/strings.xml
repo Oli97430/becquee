@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onglet_direct">Live</string>
+    <string name="onglet_visites">Visits</string>
+    <string name="onglet_reglages">Settings</string>
+    <string name="demarrer">Start camera</string>
+    <string name="arreter">Stop</string>
+    <string name="analyser_video">Analyze a video</string>
+    <string name="aucune_image">Start the camera and aim it at the feeder.</string>
+    <string name="aucune_visite">No visits yet.</string>
+    <string name="nb_visites">%1$d visits, %2$d species</string>
+    <string name="corriger">Correct</string>
+    <string name="corriger_titre">Which species?</string>
+    <string name="rechercher">Search</string>
+    <string name="annuler">Cancel</string>
+    <string name="inconnu">Unknown</string>
+    <string name="pas_un_oiseau">Not a bird</string>
+    <string name="position_titre">Feeder location</string>
+    <string name="position_aide">Used to pick the possible species (observed within 50 km on iNaturalist). Offline: last known list, otherwise BirdNET.</string>
+    <string name="ma_position">Use my location</string>
+    <string name="seuil">Confidence threshold: %1$d %%</string>
+    <string name="surface">Minimum motion size: %1$s %% of the image</string>
+    <string name="filtre_oiseaux">Delete clips without a bird</string>
+    <string name="dossier">Clips and log: %1$s</string>
+    <string name="notification_surveillance">Watching the feeder</string>
+    <string name="chargement_modeles">Loading models…</string>
+    <string name="source_ouverte">Source open: %1$dx%2$d at %3$d fps</string>
+    <string name="source_erreur">Error: %1$s</string>
+    <string name="debut_enregistrement">Motion: recording started</string>
+    <string name="sans_oiseau">Motion without a bird (%1$d s): clip deleted</string>
+    <string name="fin_visite">Visit ended: %1$s (%2$d %%), %3$d s</string>
+    <string name="especes_locales">Local species: %1$d (iNaturalist, %2$d km radius)</string>
+    <string name="especes_hors_ligne">iNaturalist list unavailable (%1$s): using BirdNET list</string>
+    <string name="analyse_terminee">Video analysis finished</string>
+    <string name="slogan">the bird feeder that knows its visitors</string>
+</resources>

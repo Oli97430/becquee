@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onglet_direct">Diretta</string>
+    <string name="onglet_visites">Visite</string>
+    <string name="onglet_reglages">Impostazioni</string>
+    <string name="demarrer">Avvia la fotocamera</string>
+    <string name="arreter">Ferma</string>
+    <string name="analyser_video">Analizza un video</string>
+    <string name="aucune_image">Avvia la fotocamera e inquadra la mangiatoia.</string>
+    <string name="aucune_visite">Nessuna visita per ora.</string>
+    <string name="nb_visites">%1$d visite, %2$d specie</string>
+    <string name="corriger">Correggi</string>
+    <string name="corriger_titre">Quale specie?</string>
+    <string name="rechercher">Cerca</string>
+    <string name="annuler">Annulla</string>
+    <string name="inconnu">Sconosciuto</string>
+    <string name="pas_un_oiseau">Non è un uccello</string>
+    <string name="position_titre">Posizione della mangiatoia</string>
+    <string name="position_aide">Serve a scegliere le specie possibili (osservate entro 50 km su iNaturalist). Senza rete: ultima lista nota, altrimenti BirdNET.</string>
+    <string name="ma_position">Usa la mia posizione</string>
+    <string name="seuil">Soglia di confidenza: %1$d %%</string>
+    <string name="surface">Dimensione minima del movimento: %1$s %% dell\'immagine</string>
+    <string name="filtre_oiseaux">Elimina le clip senza uccelli</string>
+    <string name="dossier">Clip e registro: %1$s</string>
+    <string name="notification_surveillance">Sorveglianza della mangiatoia in corso</string>
+    <string name="chargement_modeles">Caricamento dei modelli…</string>
+    <string name="source_ouverte">Sorgente aperta: %1$dx%2$d a %3$d fps</string>
+    <string name="source_erreur">Errore: %1$s</string>
+    <string name="debut_enregistrement">Movimento: inizio registrazione</string>
+    <string name="sans_oiseau">Movimento senza uccello (%1$d s): clip eliminata</string>
+    <string name="fin_visite">Fine visita: %1$s (%2$d %%), %3$d s</string>
+    <string name="especes_locales">Specie locali: %1$d (iNaturalist, raggio %2$d km)</string>
+    <string name="especes_hors_ligne">Lista iNaturalist non disponibile (%1$s): lista BirdNET</string>
+    <string name="analyse_terminee">Analisi del video terminata</string>
+    <string name="slogan">la mangiatoia che riconosce i suoi visitatori</string>
+</resources>

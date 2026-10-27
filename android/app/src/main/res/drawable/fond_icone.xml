@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- même dégradé que le logo : vert sapin -> bleu nuit -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient android:angle="270" android:startColor="#14533D" android:endColor="#0C1E30" />
+</shape>

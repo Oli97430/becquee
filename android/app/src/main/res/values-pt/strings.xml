@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onglet_direct">Ao vivo</string>
+    <string name="onglet_visites">Visitas</string>
+    <string name="onglet_reglages">Ajustes</string>
+    <string name="demarrer">Iniciar a câmera</string>
+    <string name="arreter">Parar</string>
+    <string name="analyser_video">Analisar um vídeo</string>
+    <string name="aucune_image">Inicie a câmera e aponte para o comedouro.</string>
+    <string name="aucune_visite">Nenhuma visita por enquanto.</string>
+    <string name="nb_visites">%1$d visitas, %2$d espécies</string>
+    <string name="corriger">Corrigir</string>
+    <string name="corriger_titre">Qual espécie?</string>
+    <string name="rechercher">Pesquisar</string>
+    <string name="annuler">Cancelar</string>
+    <string name="inconnu">Desconhecido</string>
+    <string name="pas_un_oiseau">Não é uma ave</string>
+    <string name="position_titre">Localização do comedouro</string>
+    <string name="position_aide">Serve para escolher as espécies possíveis (observadas a menos de 50 km no iNaturalist). Sem rede: última lista conhecida, senão BirdNET.</string>
+    <string name="ma_position">Usar minha localização</string>
+    <string name="seuil">Limiar de confiança: %1$d %%</string>
+    <string name="surface">Tamanho mínimo do movimento: %1$s %% da imagem</string>
+    <string name="filtre_oiseaux">Apagar os clipes sem ave</string>
+    <string name="dossier">Clipes e registro: %1$s</string>
+    <string name="notification_surveillance">Vigiando o comedouro</string>
+    <string name="chargement_modeles">Carregando os modelos…</string>
+    <string name="source_ouverte">Fonte aberta: %1$dx%2$d a %3$d fps</string>
+    <string name="source_erreur">Erro: %1$s</string>
+    <string name="debut_enregistrement">Movimento: início da gravação</string>
+    <string name="sans_oiseau">Movimento sem ave (%1$d s): clipe apagado</string>
+    <string name="fin_visite">Fim da visita: %1$s (%2$d %%), %3$d s</string>
+    <string name="especes_locales">Espécies locais: %1$d (iNaturalist, raio %2$d km)</string>
+    <string name="especes_hors_ligne">Lista do iNaturalist indisponível (%1$s): lista do BirdNET</string>
+    <string name="analyse_terminee">Análise do vídeo concluída</string>
+    <string name="slogan">o comedouro que reconhece seus visitantes</string>
+</resources>

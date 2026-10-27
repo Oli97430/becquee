@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Becquée</string>
+    <string name="onglet_direct">Direct</string>
+    <string name="onglet_visites">Visites</string>
+    <string name="onglet_reglages">Réglages</string>
+    <string name="demarrer">Démarrer la caméra</string>
+    <string name="arreter">Arrêter</string>
+    <string name="analyser_video">Analyser une vidéo</string>
+    <string name="aucune_image">Démarrez la caméra et visez la mangeoire.</string>
+    <string name="aucune_visite">Aucune visite pour l\'instant.</string>
+    <string name="nb_visites">%1$d visites, %2$d espèces</string>
+    <string name="corriger">Corriger</string>
+    <string name="corriger_titre">Quelle espèce ?</string>
+    <string name="rechercher">Rechercher</string>
+    <string name="annuler">Annuler</string>
+    <string name="inconnu">Inconnu</string>
+    <string name="pas_un_oiseau">Pas un oiseau</string>
+    <string name="position_titre">Position de la mangeoire</string>
+    <string name="position_aide">Sert à choisir les espèces possibles (observées à moins de 50 km sur iNaturalist). Sans réseau : dernière liste connue, sinon BirdNET.</string>
+    <string name="ma_position">Utiliser ma position</string>
+    <string name="seuil">Seuil de confiance : %1$d %%</string>
+    <string name="surface">Taille minimale du mouvement : %1$s %% de l\'image</string>
+    <string name="filtre_oiseaux">Effacer les clips sans oiseau</string>
+    <string name="dossier">Clips et journal : %1$s</string>
+    <string name="notification_surveillance">Surveillance de la mangeoire en cours</string>
+    <string name="chargement_modeles">Chargement des modèles…</string>
+    <string name="source_ouverte">Source ouverte : %1$dx%2$d à %3$d i/s</string>
+    <string name="source_erreur">Erreur : %1$s</string>
+    <string name="debut_enregistrement">Mouvement : début d\'enregistrement</string>
+    <string name="sans_oiseau">Mouvement sans oiseau (%1$d s) : clip effacé</string>
+    <string name="fin_visite">Fin de visite : %1$s (%2$d %%), %3$d s</string>
+    <string name="especes_locales">Espèces locales : %1$d (iNaturalist, rayon %2$d km)</string>
+    <string name="especes_hors_ligne">Liste iNaturalist indisponible (%1$s) : liste BirdNET</string>
+    <string name="analyse_terminee">Analyse de la vidéo terminée</string>
+    <string name="slogan">la mangeoire qui reconnaît ses visiteurs</string>
+</resources>
