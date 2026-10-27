@@ -48,8 +48,9 @@ class Journal(private val dossier: File) {
         ligne["corrige"] = "1"
         ligne["source"] = "manuel"
         ecrire(lignes)
-        val photo = ligne["photo"].orEmpty()
-        if (photo.isNotEmpty()) {
+        // le journal peut avoir été modifié à la main : nom de fichier simple, dans le dossier des visites
+        val photo = File(ligne["photo"].orEmpty()).name
+        if (photo.isNotEmpty() && photo != "..") {
             val p = File(dossier, photo)
             val recadrage = File(dossier, p.nameWithoutExtension + "_oiseau.jpg")
             val source = if (recadrage.exists()) recadrage else p

@@ -54,9 +54,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // test automatique : adb shell am start -n <appli>/.MainActivity --es video <chemin du fichier>
-        intent.getStringExtra("latitude")?.toDoubleOrNull()?.let { Reglages(this).latitude = it }
-        intent.getStringExtra("longitude")?.toDoubleOrNull()?.let { Reglages(this).longitude = it }
-        intent.getStringExtra("video")?.let { SurveillanceService.lancer(this, SurveillanceService.FICHIER, Uri.fromFile(File(it))) }
+        // seulement une vidéo déposée dans le dossier de l'appli (l'activité est accessible aux autres applis)
+        val dossierTest = (getExternalFilesDir(null) ?: filesDir).canonicalFile
+        intent.getStringExtra("video")?.let { File(it).canonicalFile }?.takeIf { it.isFile && it.parentFile == dossierTest }?.let { video ->
+            intent.getStringExtra("latitude")?.toDoubleOrNull()?.takeIf { it in -90.0..90.0 }?.let { Reglages(this).latitude = it }
+            intent.getStringExtra("longitude")?.toDoubleOrNull()?.takeIf { it in -180.0..180.0 }?.let { Reglages(this).longitude = it }
+            SurveillanceService.lancer(this, SurveillanceService.FICHIER, Uri.fromFile(video))
+        }
         setContent {
             MaterialTheme(colorScheme = Couleurs.theme) { Ecran() }
         }
