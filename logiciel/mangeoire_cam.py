@@ -189,7 +189,57 @@ def corriger_visite(dossier, video, espece):
             cible.mkdir(parents=True, exist_ok=True)
             (cible / "nom.txt").write_text(espece, encoding="utf-8")
             (cible / photo.name).write_bytes(source.read_bytes())
+    # la photo quitte la galerie de l'ancienne espèce ; vérifiée à la main, elle passe devant
+    index = lire_galerie(dossier)
+    for nom, e in list(index.items()):
+        if e["video"] == video and nom != espece:
+            (dossier / e["photo"]).unlink(missing_ok=True)
+            del index[nom]
+    _ecrire_galerie(dossier, index)
+    garder_dans_galerie(dossier, {**ligne, "confiance": "1.00"})
     return ligne
+
+
+# ------------------------------------------------------------------
+#  Galerie : meilleure photo de chaque espèce (le ménage n'y touche pas)
+# ------------------------------------------------------------------
+def lire_galerie(dossier):
+    try:
+        return json.loads((Path(dossier) / "galerie" / "galerie.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _ecrire_galerie(dossier, index):
+    chemin = Path(dossier) / "galerie" / "galerie.json"
+    chemin.parent.mkdir(parents=True, exist_ok=True)
+    chemin.write_text(json.dumps(index, indent=1, ensure_ascii=False), encoding="utf-8")
+
+
+def garder_dans_galerie(dossier, ligne):
+    """Copie la photo de la visite dans galerie/ si c'est la plus sûre de son espèce."""
+    dossier, espece = Path(dossier), ligne["espece"]
+    if espece in ("Inconnu", PAS_UN_OISEAU) or not ligne.get("photo") or not (dossier / ligne["photo"]).exists():
+        return False
+    index = lire_galerie(dossier)
+    ancienne = index.get(espece)
+    if ancienne and float(ancienne["confiance"]) > float(ligne["confiance"]):
+        return False
+    photo = f"galerie/{nom_fichier(espece)}.jpg"
+    source = dossier / ligne["photo"]
+    recadrage = source.with_name(source.stem + "_oiseau.jpg")     # l'oiseau en gros plutôt que toute la scène
+    (dossier / "galerie").mkdir(exist_ok=True)
+    (dossier / photo).write_bytes((recadrage if recadrage.exists() else source).read_bytes())
+    index[espece] = {"photo": photo, "confiance": ligne["confiance"], "date": ligne["date"],
+                     "heure": ligne["heure"], "video": ligne["video"]}
+    _ecrire_galerie(dossier, index)
+    return True
+
+
+def construire_galerie(dossier):
+    """Première ouverture : la galerie est remplie avec les visites déjà notées."""
+    for ligne in lire_journal(dossier):
+        garder_dans_galerie(dossier, ligne)
 
 
 def effacer_clips_interrompus(dossier):
@@ -972,6 +1022,7 @@ class Surveillance:
                  "video": video.name, "photo": photo.name if photo else "", "source": source,
                  "chants": ", ".join(f"{e} {c:.0%}" for e, c in chants[:3]), "corrige": ""}
         ajouter_ligne(journal, ligne, COLONNES)
+        garder_dans_galerie(self.dossier, ligne)
         self.sur_message(_("Fin de visite : {espece} ({conf}), {duree} s",
                            espece=_(espece) if espece == "Inconnu" else espece,
                            conf=f"{confiance:.0%}", duree=f"{duree:.0f}"))

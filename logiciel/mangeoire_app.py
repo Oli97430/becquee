@@ -15,7 +15,7 @@ import threading
 import time
 import tkinter as tk
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
@@ -25,7 +25,8 @@ from PIL import Image, ImageDraw, ImageFont, ImageTk
 import langues
 from langues import LANGUES, _
 from mangeoire_cam import (PAS_UN_OISEAU, DetecteurOiseaux, Ecoute, Reconnaisseur, Surveillance,
-                           chercher_lieu, cle_espece, corriger_visite, lire_journal)
+                           chercher_lieu, cle_espece, construire_galerie, corriger_visite, lire_galerie,
+                           lire_journal)
 
 ICI = Path(__file__).resolve().parent
 MODELES = ICI / "modeles"
@@ -241,6 +242,8 @@ class App:
         self.btn_demarrer.pack(side="left")
         ttk.Button(barre, text=_("📷  Photo"), command=self.photo).pack(side="left", padx=(8, 0))
         ttk.Button(barre, text=_("📁  Dossier"), command=self.ouvrir_dossier).pack(side="left", padx=(8, 0))
+        ttk.Button(barre, text=_("📊  Statistiques"), command=self.statistiques).pack(side="left", padx=(8, 0))
+        ttk.Button(barre, text=_("🖼  Galerie"), command=self.galerie).pack(side="left", padx=(8, 0))
         ttk.Button(barre, text=_("⚙  Réglages"), command=self.reglages).pack(side="right")
 
         # Corps : vidéo + colonne droite
@@ -902,6 +905,151 @@ class App:
     def ouvrir_dossier(self):
         self.dossier.mkdir(parents=True, exist_ok=True)
         os.startfile(self.dossier)
+
+    # -------------------------------------------------------------- statistiques
+    def statistiques(self):
+        f = tk.Toplevel(self.root, bg=FOND, padx=20, pady=16)
+        f.title(_("Statistiques — Becquée"))
+        f.transient(self.root)
+        f.geometry("1000x760")
+        visites = [l for l in lire_journal(self.dossier) if l["espece"] != PAS_UN_OISEAU]
+        var_periode = tk.StringVar(value="30")
+
+        haut = tk.Frame(f, bg=FOND)
+        haut.pack(fill="x")
+        for valeur, texte in (("7", _("7 jours")), ("30", _("30 jours")), ("0", _("Tout"))):
+            tk.Radiobutton(haut, text=texte, value=valeur, variable=var_periode, indicatoron=False,
+                           bg=CARTE, fg=TEXTE, selectcolor=BORD, activebackground=BORD, activeforeground=TEXTE,
+                           font=("Segoe UI Semibold", 10), padx=14, pady=5, bd=0,
+                           command=lambda: dessiner()).pack(side="left", padx=(0, 6))
+        chiffres = tk.Frame(f, bg=FOND)
+        chiffres.pack(fill="x", pady=(14, 10))
+        corps = tk.Frame(f, bg=FOND)
+        corps.pack(fill="both", expand=True)
+        corps.columnconfigure(0, weight=1)
+        corps.columnconfigure(1, weight=1)
+        corps.rowconfigure(1, weight=1)
+
+        def carte(titre, **grid):
+            c = self._carte(corps, titre, **grid)
+            toile = tk.Canvas(c, bg=CARTE, highlightthickness=0, height=200)
+            toile.pack(fill="both", expand=True)
+            return toile
+        t_especes = carte(_("Visites par espèce"), row=0, column=0, rowspan=2, sticky="nsew", padx=(0, 12))
+        t_heures = carte(_("Visites par heure"), row=0, column=1, sticky="nsew", pady=(0, 12))
+        t_jours = carte(_("Visites par jour"), row=1, column=1, sticky="nsew")
+
+        def dessiner():
+            jours = int(var_periode.get())
+            debut = (datetime.now() - timedelta(days=jours - 1)).strftime("%Y-%m-%d") if jours else ""
+            choix = [l for l in visites if l["date"] >= debut]
+            nommees = [l for l in choix if l["espece"] != "Inconnu"]
+            especes = Counter(l["espece"] for l in nommees)
+
+            for w in chiffres.winfo_children():
+                w.destroy()
+            for valeur, texte in ((len(choix), _("visites")), (len(especes), _("espèces")),
+                                  (especes.most_common(1)[0][0] if especes else "—", _("espèce la plus fréquente"))):
+                c = tk.Frame(chiffres, bg=CARTE, padx=16, pady=10)
+                c.pack(side="left", padx=(0, 12))
+                tk.Label(c, text=str(valeur), bg=CARTE, fg=TEXTE, font=("Segoe UI Semibold", 22)).pack(anchor="w")
+                tk.Label(c, text=texte, bg=CARTE, fg=DISCRET, font=("Segoe UI", 10)).pack(anchor="w")
+
+            f.update_idletasks()
+            # visites par espèce : barres horizontales, les plus fréquentes en haut
+            t = t_especes
+            t.delete("all")
+            larg, haut_t = t.winfo_width(), t.winfo_height()
+            top = especes.most_common(max(1, (haut_t - 4) // 24))
+            if not top:
+                t.create_text(0, 14, anchor="w", text=_("Aucune visite sur cette période"), fill=DISCRET,
+                              font=("Segoe UI", 10))
+            else:
+                from tkinter import font as tkfont
+                fnt = tkfont.Font(family="Segoe UI", size=10)
+                noms = [e if len(e) <= 24 else e[:23] + "…" for e, _ in top]
+                x0 = max(fnt.measure(n) for n in noms) + 12
+                for i, ((espece, n), nom) in enumerate(zip(top, noms)):
+                    y = i * 24 + 4
+                    barre = max(4, (larg - x0 - 44) * n / top[0][1])
+                    t.create_text(0, y + 9, anchor="w", text=nom, fill=TEXTE, font=fnt)
+                    t.create_rectangle(x0, y + 3, x0 + barre, y + 15,
+                                       fill=COULEURS_ESPECES[i % len(COULEURS_ESPECES)], width=0)
+                    t.create_text(x0 + barre + 8, y + 9, anchor="w", text=str(n), fill=DISCRET,
+                                  font=("Segoe UI", 9))
+
+            def colonnes(toile, valeurs, etiquettes, pas_etiquette):
+                toile.delete("all")
+                larg, haut_t = toile.winfo_width(), toile.winfo_height()
+                maxi = max(valeurs) or 1
+                pas = larg / len(valeurs)
+                for i, (v, e) in enumerate(zip(valeurs, etiquettes)):
+                    h = (haut_t - 30) * v / maxi
+                    x = i * pas
+                    if v:
+                        toile.create_rectangle(x + pas * 0.15, haut_t - 20 - h, x + pas * 0.85, haut_t - 20,
+                                               fill=BLEU, width=0)
+                    if i % pas_etiquette == 0:
+                        toile.create_text(x + pas / 2, haut_t - 8, text=e, fill=DISCRET, font=("Segoe UI", 8))
+                toile.create_text(larg - 2, 2, anchor="ne", text=f"max {maxi}", fill=DISCRET, font=("Segoe UI", 8))
+
+            heures = Counter(int(l["heure"][:2]) for l in choix)
+            colonnes(t_heures, [heures[h] for h in range(24)], [f"{h}h" for h in range(24)], 3)
+            nb_jours = jours or max(1, (datetime.now() - datetime.strptime(
+                min((l["date"] for l in choix), default=datetime.now().strftime("%Y-%m-%d")), "%Y-%m-%d")).days + 1)
+            dates = [(datetime.now() - timedelta(days=nb_jours - 1 - i)) for i in range(nb_jours)]
+            par_jour = Counter(l["date"] for l in choix)
+            colonnes(t_jours, [par_jour[d.strftime("%Y-%m-%d")] for d in dates],
+                     [d.strftime("%d/%m") for d in dates], max(1, nb_jours // 8))
+
+        f.bind("<Configure>", lambda e: dessiner() if e.widget is f else None)
+        f.after(50, dessiner)
+
+    # -------------------------------------------------------------- galerie
+    def galerie(self):
+        if not (self.dossier / "galerie" / "galerie.json").exists():
+            construire_galerie(self.dossier)
+        index = lire_galerie(self.dossier)
+        nb_visites = Counter(l["espece"] for l in lire_journal(self.dossier))
+        f = tk.Toplevel(self.root, bg=FOND, padx=16, pady=16)
+        f.title(_("Galerie — Becquée"))
+        f.transient(self.root)
+        f.geometry("1200x760")
+        if not index:
+            tk.Label(f, text=_("Aucune photo pour l'instant"), bg=FOND, fg=DISCRET,
+                     font=("Segoe UI", 12)).pack(pady=40)
+            return
+        toile = tk.Canvas(f, bg=FOND, highlightthickness=0)
+        defil = ttk.Scrollbar(f, orient="vertical", command=toile.yview)
+        toile.configure(yscrollcommand=defil.set)
+        defil.pack(side="right", fill="y")
+        toile.pack(side="left", fill="both", expand=True)
+        grille = tk.Frame(toile, bg=FOND)
+        toile.create_window(0, 0, anchor="nw", window=grille)
+        grille.bind("<Configure>", lambda e: toile.configure(scrollregion=toile.bbox("all")))
+        f.bind("<MouseWheel>", lambda e: toile.yview_scroll(-e.delta // 120, "units"))
+        f.images = []
+        especes = sorted(index, key=lambda e: (-nb_visites[e], e))
+        for i, espece in enumerate(especes):
+            e = index[espece]
+            chemin = self.dossier / e["photo"]
+            c = tk.Frame(grille, bg=CARTE, padx=8, pady=8, cursor="hand2")
+            c.grid(row=i // 4, column=i % 4, padx=(0, 12), pady=(0, 12), sticky="n")
+            try:
+                img = Image.open(chemin)
+                img.thumbnail((250, 170))
+                f.images.append(ImageTk.PhotoImage(img))
+                photo = tk.Label(c, image=f.images[-1], bg="#0b1016", width=250, height=170)
+            except OSError:
+                photo = tk.Label(c, bg="#0b1016", width=35, height=10)
+            photo.pack()
+            tk.Label(c, text=espece, bg=CARTE, fg=TEXTE, font=("Segoe UI Semibold", 11),
+                     wraplength=250, justify="left").pack(anchor="w", pady=(6, 0))
+            quand = _("{jour}/{mois} à {heure}", jour=e["date"][8:], mois=e["date"][5:7], heure=e["heure"][:5])
+            tk.Label(c, text=f"{float(e['confiance']):.0%}  ·  {quand}  ·  {nb_visites[espece]} " + _("visites"),
+                     bg=CARTE, fg=DISCRET, font=("Segoe UI", 9)).pack(anchor="w")
+            for w in (c, *c.winfo_children()):
+                w.bind("<Button-1>", lambda ev, p=chemin: os.startfile(p) if p.exists() else None)
 
     def _precharger_modele(self, reconnaisseur=None):
         """Charge les modèles ; un nouveau reconnaisseur (position ou dossier changés) remplace
