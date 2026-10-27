@@ -89,6 +89,14 @@ Remove-Item Env:HF_HOME
 Etape "Nettoyage"
 Get-ChildItem $app -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -Force
 Get-ChildItem (Join-Path $app "hf_cache") -Recurse -Directory -Filter ".locks" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+# cache Hugging Face : les snapshots sont des liens vers blobs\ ; Inno Setup copierait chaque modèle deux fois
+foreach ($lien in Get-ChildItem (Join-Path $app "hf_cache") -Recurse -File -Force | Where-Object LinkType -eq "SymbolicLink") {
+    $cible = @($lien.Target)[0]                     # Windows PowerShell 5.1 : tableau ; chemin relatif ou absolu
+    if (-not [IO.Path]::IsPathRooted($cible)) { $cible = (Resolve-Path (Join-Path $lien.DirectoryName $cible)).Path }
+    Remove-Item $lien.FullName -Force
+    Copy-Item $cible $lien.FullName
+}
+Get-ChildItem (Join-Path $app "hf_cache") -Recurse -Directory -Filter "blobs" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
 $taille = (Get-ChildItem $app -Recurse -File | Measure-Object Length -Sum).Sum / 1GB
 Write-Host ("Application prête : {0:N2} Go" -f $taille)
 
