@@ -316,11 +316,24 @@ def _especes_locales(dossier_modeles, latitude, longitude, sur_message=print):
         return especes_birdnet(dossier_modeles, latitude, longitude)
 
 
+# pays essayé en premier pour un code postal seul (sinon 97400 donne la Crimée, 75001 le Texas…)
+PAYS_CODE_POSTAL = {"fr": "fr", "es": "es", "de": "de", "pt": "br", "it": "it"}
+
+
 def chercher_lieu(texte):
     """Ville ou adresse -> (latitude, longitude, nom complet), via OpenStreetMap (Nominatim)."""
-    q = urllib.parse.urlencode({"q": texte, "format": "json", "limit": 1, "accept-language": langues.langue})
-    r = json.load(urllib.request.urlopen(urllib.request.Request(
-        "https://nominatim.openstreetmap.org/search?" + q, headers=AGENT), timeout=20))
+    def nominatim(**params):
+        q = urllib.parse.urlencode({**params, "format": "json", "limit": 1, "accept-language": langues.langue})
+        return json.load(urllib.request.urlopen(urllib.request.Request(
+            "https://nominatim.openstreetmap.org/search?" + q, headers=AGENT), timeout=20))
+
+    r = []
+    code = texte.replace(" ", "")
+    pays = PAYS_CODE_POSTAL.get(langues.langue)
+    if code.isdigit() and pays:
+        r = nominatim(postalcode=code, countrycodes=pays)
+    if not r:
+        r = nominatim(q=texte)
     if not r:
         return None
     return round(float(r[0]["lat"]), 3), round(float(r[0]["lon"]), 3), r[0]["display_name"]
