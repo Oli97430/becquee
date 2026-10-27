@@ -60,6 +60,7 @@ foreach ($n in @(@("README.md", "LISEZMOI.md"), @("README.en.md", "README.en.md"
 }
 if (Test-Path $Impression) {        # modèle 3D de la mangeoire : STL, source OpenSCAD et aperçus
     $i3d = Join-Path $app "impression3d"
+    if (Test-Path $i3d) { Remove-Item $i3d -Recurse -Force }      # pas de restes d'une construction précédente
     New-Item -ItemType Directory -Force $i3d | Out-Null
     Copy-Item (Join-Path $Impression "stl\*.stl"), (Join-Path $Impression "*.scad"), (Join-Path $Impression "apercus\*.png") $i3d -Force
 }
