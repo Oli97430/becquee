@@ -47,21 +47,7 @@ A 3D-printed camera bird feeder + a Windows app that records, recognizes and lea
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A["Camera<br/>webcam or smartphone"] --> B{"Motion?"}
-    B -->|yes| C["MP4 clip<br/>with 3 s before"]
-    C --> D{"Bird?<br/>YOLOS-tiny then BioCLIP"}
-    D -->|no| X["Clip deleted"]
-    D -->|yes| E["Cropped bird"]
-    E --> F["BioCLIP<br/>local iNaturalist species<br/>and your corrections"]
-    M["Microphone"] --> G["BirdNET<br/>and learned songs"]
-    F --> H["Vote over the whole visit"]
-    G --> H
-    H --> I["Log, photo,<br/>statistics"]
-    I -.->|right-click| J["Correction"]
-    J -.->|learning| F
-```
+<p align="center"><img src="docs/schema_en.png" alt="How it works" width="900"></p>
 
 - **Local list**: from the feeder's location, Becquée downloads the species observed (iNaturalist research-grade observations) within 50 km, widened to 200 then 1,000 km in poorly surveyed regions. It is cached for 30 days; offline, BirdNET's geographic model takes over.
 - **Image**: BioCLIP compares the cropped bird with the scientific (and English) name of each local species. With equal evidence, a species common in the region wins over a rarity. The chosen species must come first in at least half of the visit's analyses and reach the set threshold; otherwise the visit is logged as "Unknown".
@@ -221,7 +207,7 @@ becquee/
 │   └── tests/                  translation check, interface tests, test videos
 ├── modele_3d/                  OpenSCAD source, STLs, previews
 ├── installateur/               build script + Inno Setup script
-└── docs/captures/
+└── docs/                       screenshots, diagram (docs/schema.py redraws it)
 ```
 
 The code is written in French (names, comments); user-facing text goes through `langues._()`.

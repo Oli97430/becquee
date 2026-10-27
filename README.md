@@ -45,21 +45,7 @@ Mangeoire à caméra imprimée en 3D + application Windows qui filme, reconnaît
 
 ## Comment ça marche
 
-```mermaid
-flowchart LR
-    A["Caméra<br/>webcam ou smartphone"] --> B{"Mouvement ?"}
-    B -->|oui| C["Clip MP4<br/>avec 3 s avant"]
-    C --> D{"Oiseau ?<br/>YOLOS-tiny puis BioCLIP"}
-    D -->|non| X["Clip effacé"]
-    D -->|oui| E["Oiseau recadré"]
-    E --> F["BioCLIP<br/>espèces locales iNaturalist<br/>et vos corrections"]
-    M["Micro"] --> G["BirdNET<br/>et chants appris"]
-    F --> H["Vote sur toute la visite"]
-    G --> H
-    H --> I["Journal, photo,<br/>statistiques"]
-    I -.->|clic droit| J["Correction"]
-    J -.->|apprentissage| F
-```
+<p align="center"><img src="docs/schema_fr.png" alt="Schéma de fonctionnement" width="900"></p>
 
 - **Liste locale** : à partir de la position de la mangeoire, Becquée télécharge les espèces observées (observations validées iNaturalist) dans un rayon de 50 km, élargi à 200 puis 1 000 km dans les régions peu observées. Elle est mise en cache 30 jours ; sans réseau, le méta-modèle géographique de BirdNET prend le relais.
 - **Image** : BioCLIP compare l'oiseau recadré au nom scientifique (et anglais) de chaque espèce locale. Une espèce fréquente dans la région l'emporte, à image égale, sur une rareté. L'espèce retenue doit arriver en tête sur au moins la moitié des analyses de la visite et atteindre le seuil réglé ; sinon la visite est notée « Inconnu ».
@@ -223,7 +209,7 @@ becquee/
 │   └── tests/                  vérification des traductions, tests d'interface, vidéos de test
 ├── modele_3d/                  source OpenSCAD, STL, aperçus
 ├── installateur/               script de construction + script Inno Setup
-└── docs/captures/
+└── docs/                       captures d'écran, schéma (docs/schema.py le redessine)
 ```
 
 **Tests**
