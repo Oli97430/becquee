@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Modèles et caches téléchargés au premier lancement (BirdNET, listes d'espèces, BioCLIP)
+logiciel/modeles/
+logiciel/hf_cache/
+
+# Données de l'utilisateur
+visites/
+*.becquee.json
+
+# Installateur (se reconstruit avec installateur/construire_installateur.ps1)
+*.exe
+Becquee_build/
+
+# Divers
+*.tmp
+Thumbs.db
+desktop.ini
