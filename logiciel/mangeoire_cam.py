@@ -434,6 +434,14 @@ def appareil():
     return "cuda" if torch.cuda.is_available() else "cpu"
 
 
+def egaliser(image_bgr):
+    """Contraste local (CLAHE sur la luminance) : un oiseau à contre-jour redevient lisible.
+    Sans cela, un Bulbul de Bourbon sombre sur ciel clair était pris pour une Perruche à collier."""
+    l, a, b = cv2.split(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2LAB))
+    l = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(l)
+    return cv2.cvtColor(cv2.merge((l, a, b)), cv2.COLOR_LAB2BGR)
+
+
 class Reconnaisseur:
     """Espèce à partir d'une image d'oiseau recadrée, avec BioCLIP (modèle du vivant entraîné
     sur l'arbre de la vie : il reconnaît une espèce à partir de son nom scientifique).
@@ -551,10 +559,11 @@ class Reconnaisseur:
                             v = np.zeros(self.textes.shape[1], np.float32)
                         textes.append(v)
                     for p in photos:
-                        k = f"{sous.name}|{p.name}|{p.stat().st_size}"
+                        k = f"egal|{sous.name}|{p.name}|{p.stat().st_size}"     # egal : vecteur d'image égalisée
                         v = anciens.get(k)
                         if v is None:
-                            v = self._vecteur_image(Image.open(p))
+                            bgr = cv2.cvtColor(np.asarray(Image.open(p).convert("RGB")), cv2.COLOR_RGB2BGR)
+                            v = self._vecteur_image(Image.fromarray(cv2.cvtColor(egaliser(bgr), cv2.COLOR_BGR2RGB)))
                         gardes[k] = v
                         vecteurs.append(v)
                         etiquettes.append(index[cle])
@@ -598,7 +607,7 @@ class Reconnaisseur:
         from PIL import Image
         self.charger()
         with self._verrou:
-            f = self._vecteur_image(Image.fromarray(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)))
+            f = self._vecteur_image(Image.fromarray(cv2.cvtColor(egaliser(image_bgr), cv2.COLOR_BGR2RGB)))
             logits = 100.0 * self.textes_classes @ f + self.a_priori
             if len(self.sans_texte):
                 # classes connues seulement par leurs exemples (« Pas un oiseau »...) : un cran sous la

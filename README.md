@@ -220,7 +220,7 @@ becquee/
 ```bash
 cd logiciel
 python tests/verifier_traductions.py            # chaque texte traduit dans les 6 langues, mêmes champs
-python tests/test_moteur.py                     # vidéo de test : 12 espèces justes, faux visiteur effacé (~30 s)
+python tests/test_moteur.py                     # 2 vidéos de test : 22 visites justes, faux visiteurs effacés (~1 min)
 python tests/test_langues.py en <visites> <sortie>   # ouvre l'interface en anglais et la capture
 ```
 

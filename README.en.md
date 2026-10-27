@@ -220,7 +220,7 @@ The code is written in French (names, comments); user-facing text goes through `
 ```bash
 cd logiciel
 python tests/verifier_traductions.py                 # every string translated in all 6 languages, same fields
-python tests/test_moteur.py                          # test video: 12 species right, fake visitor deleted (~30 s)
+python tests/test_moteur.py                          # 2 test videos: 22 visits right, fake visitors deleted (~1 min)
 python tests/test_langues.py en <visits> <output>    # opens the interface in English and captures it
 ```
 
