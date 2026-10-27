@@ -428,6 +428,12 @@ def chercher_lieu(texte):
 # ------------------------------------------------------------------
 #  Modèles image
 # ------------------------------------------------------------------
+def appareil():
+    """« cuda » si une carte graphique NVIDIA est utilisable (PyTorch CUDA installé), sinon « cpu »."""
+    import torch
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+
 class Reconnaisseur:
     """Espèce à partir d'une image d'oiseau recadrée, avec BioCLIP (modèle du vivant entraîné
     sur l'arbre de la vie : il reconnaît une espèce à partir de son nom scientifique).
@@ -463,7 +469,8 @@ class Reconnaisseur:
             import open_clip
             self.modele, _entrainement, self.pretraitement = open_clip.create_model_and_transforms(MODELE_BIOCLIP)
             self.tokenizer = open_clip.get_tokenizer(MODELE_BIOCLIP)
-            self.modele.eval()
+            self.appareil = appareil()
+            self.modele.to(self.appareil).eval()
             self.especes = especes_locales(self.dossier_modeles, self.latitude, self.longitude, self.sur_message)
             self.textes = self._vecteurs_texte(self.especes)
             self.apprendre()
@@ -471,8 +478,8 @@ class Reconnaisseur:
     def _encoder_textes(self, textes):
         import torch
         with torch.no_grad():
-            v = self.modele.encode_text(self.tokenizer(textes)).float()
-        return (v / v.norm(dim=-1, keepdim=True)).numpy()
+            v = self.modele.encode_text(self.tokenizer(textes).to(self.appareil)).float()
+        return (v / v.norm(dim=-1, keepdim=True)).cpu().numpy()
 
     def _vecteurs_texte(self, especes):
         """Un vecteur par espèce (« a photo of Parus major (Great Tit). »), mis en cache."""
@@ -506,8 +513,8 @@ class Reconnaisseur:
     def _vecteur_image(self, image_pil):
         import torch
         with torch.no_grad():
-            v = self.modele.encode_image(self.pretraitement(image_pil.convert("RGB"))[None]).float()
-        return (v / v.norm(dim=-1, keepdim=True)).numpy()[0]
+            v = self.modele.encode_image(self.pretraitement(image_pil.convert("RGB"))[None].to(self.appareil)).float()
+        return (v / v.norm(dim=-1, keepdim=True)).cpu().numpy()[0]
 
     # --- apprentissage sur les corrections
     def apprendre(self):
@@ -619,7 +626,7 @@ class DetecteurOiseaux:
         with self._verrou:
             if self.pipe is None:
                 from transformers import pipeline
-                self.pipe = pipeline("object-detection", model=self.modele)
+                self.pipe = pipeline("object-detection", model=self.modele, device=appareil())
 
     def detecter(self, image_bgr):
         """Liste de (score, (x, y, l, h)) en pixels de l'image d'origine, du plus grand au plus petit."""

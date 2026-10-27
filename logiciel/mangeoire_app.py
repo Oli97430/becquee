@@ -1074,6 +1074,8 @@ class App:
         texte = _("Modèles prêts · {n} espèces locales", n=len(r.especes))
         if r.nb_exemples:
             texte += _(" · photos apprises : {n}", n=r.nb_exemples)
+        if getattr(r, "appareil", "cpu") == "cuda":
+            texte += " · GPU"
         return texte
 
     def _apprendre(self):

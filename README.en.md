@@ -124,6 +124,8 @@ venv\Scripts\pythonw mangeoire_app.py
 
 On first launch, the models (~800 MB) are downloaded from Hugging Face and GitHub.
 
+**NVIDIA graphics card**: install PyTorch with CUDA instead (`--index-url https://download.pytorch.org/whl/cu126`, ~2.5 GB). Becquée uses it automatically ("GPU" shows at the top of the window): about 10× faster per image (RTX 3090: 0.03 s vs 0.27 s).
+
 ---
 
 ## Using it
@@ -257,5 +259,5 @@ Because of BirdNET, the whole package cannot be used commercially as is. Becqué
 
 - **Windows only** for the interface and installer (the `mangeoire_cam.py` engine is plain Python).
 - **Endemic songs**: with few public recordings (1 to 5 per species without a xeno-canto key), the safe 99 % threshold still rarely recognizes these songs; a xeno-canto key and the sounds kept from visits improve this over time.
-- **CPU only**: everything runs on the processor (~0.15 s per image analysis); keep a PC running, or dedicate an old laptop.
+- **CPU**: the installer runs on the processor (~0.15 s per image analysis); keep a PC running, or dedicate an old laptop. An NVIDIA card is only used with the install from sources (see above).
 - **Microphone**: a muted microphone (keyboard key, level 0 in Windows) is reported as "Microphone silent".

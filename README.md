@@ -122,6 +122,8 @@ venv\Scripts\pythonw mangeoire_app.py
 
 Au premier lancement, les modèles (~800 Mo) sont téléchargés depuis Hugging Face et GitHub.
 
+**Carte graphique NVIDIA** : installer PyTorch avec CUDA à la place (`--index-url https://download.pytorch.org/whl/cu126`, ~2,5 Go). Becquée l'utilise d'elle-même (« GPU » s'affiche en haut de la fenêtre) : environ 10 fois plus rapide par image (RTX 3090 : 0,03 s contre 0,27 s).
+
 ---
 
 ## Utilisation
@@ -257,5 +259,5 @@ Le script prépare un Python 3.11 autonome ([python-build-standalone](https://gi
 
 - **Windows uniquement** pour l'interface et l'installateur (le moteur `mangeoire_cam.py` est en Python standard).
 - **Chants des endémiques** : avec peu d'enregistrements publics (1 à 5 par espèce sans clé xeno-canto), le seuil sûr de 99 % reconnaît encore rarement ces chants ; la clé xeno-canto et les sons gardés lors des visites améliorent la situation avec le temps.
-- **Processeur** : tout tourne sur le CPU (~0,15 s par analyse d'image) ; prévoir un PC allumé, ou un vieux portable dédié.
+- **Processeur** : l'installateur tourne sur le CPU (~0,15 s par analyse d'image) ; prévoir un PC allumé, ou un vieux portable dédié. Une carte NVIDIA n'est utilisée qu'avec l'installation depuis les sources (voir plus haut).
 - **Micro** : un micro coupé (touche du clavier, niveau 0 dans Windows) est signalé par « Micro muet ».
