@@ -101,7 +101,7 @@ Parts: `socle`, `corps`, `facade`, `toit`, `perchoir`, `cale`, `support_poteau` 
 
 ### With the installer (recommended)
 
-Windows 10 or 11, 64-bit, ~3 GB of disk space. Run **`Becquee_Installation.exe`** (~850 MB):
+Windows 10 or 11, 64-bit, ~3 GB of disk space. Download **[`Becquee_Installation.exe`](https://github.com/Oli97430/becquee/releases/latest)** (~850 MB, *Releases* page) and run it:
 
 - everything is included (Python 3.11, PyTorch, OpenCV, bird and song models): **no Internet connection is needed to install**;
 - per-user installation, **no admin rights**;

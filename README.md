@@ -99,7 +99,7 @@ Pièces : `socle`, `corps`, `facade`, `toit`, `perchoir`, `cale`, `support_potea
 
 ### Avec l'installateur (recommandé)
 
-Windows 10 ou 11, 64 bits, ~3 Go d'espace disque. Lancer **`Becquee_Installation.exe`** (~850 Mo) :
+Windows 10 ou 11, 64 bits, ~3 Go d'espace disque. Télécharger **[`Becquee_Installation.exe`](https://github.com/Oli97430/becquee/releases/latest)** (~850 Mo, page *Releases*) et le lancer :
 
 - tout est inclus (Python 3.11, PyTorch, OpenCV, modèles d'oiseaux et de chants) : **aucune connexion n'est nécessaire pour installer** ;
 - installation pour l'utilisateur courant, **sans droits administrateur** ;
