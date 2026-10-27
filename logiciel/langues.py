@@ -258,16 +258,28 @@ TEXTES = {
     "Compléter les chants": {"en": "Learn missing songs", "es": "Completar los cantos", "de": "Gesänge ergänzen",
                              "pt": "Completar os cantos", "it": "Completa i canti"},
     "Smartphone : appli « IP Webcam » (Android), adresse du type http://192.168.1.20:8080/video.\n"
+    "Caméra sur Internet (nid, mangeoire) : collez l'adresse de la page YouTube ou du flux,\n"
+    "et réglez la position sur le lieu de la caméra. Le micro du PC n'est pas utilisé pour ses visites.\n"
     "L'écoute utilise le micro du PC (ou de la webcam USB).": {
         "en": "Smartphone: “IP Webcam” app (Android), address like http://192.168.1.20:8080/video.\n"
+              "Camera on the Internet (nest, feeder): paste the address of the YouTube page or of the stream,\n"
+              "and set the position to the camera's location. The PC microphone is not used for its visits.\n"
               "Listening uses the PC microphone (or the USB webcam's).",
         "es": "Smartphone: app «IP Webcam» (Android), dirección del tipo http://192.168.1.20:8080/video.\n"
+              "Cámara en Internet (nido, comedero): pegue la dirección de la página de YouTube o del flujo,\n"
+              "y ajuste la posición al lugar de la cámara. El micrófono del PC no se usa para sus visitas.\n"
               "La escucha usa el micrófono del PC (o de la webcam USB).",
         "de": "Smartphone: App „IP Webcam“ (Android), Adresse wie http://192.168.1.20:8080/video.\n"
+              "Kamera im Internet (Nest, Futterhaus): Adresse der YouTube-Seite oder des Streams einfügen\n"
+              "und den Standort auf den Ort der Kamera setzen. Das PC-Mikrofon wird für ihre Besuche nicht verwendet.\n"
               "Zum Hören wird das Mikrofon des PCs (oder der USB-Webcam) verwendet.",
         "pt": "Smartphone: app “IP Webcam” (Android), endereço do tipo http://192.168.1.20:8080/video.\n"
+              "Câmera na Internet (ninho, comedouro): cole o endereço da página do YouTube ou do fluxo,\n"
+              "e ajuste a posição para o local da câmera. O microfone do PC não é usado para as suas visitas.\n"
               "A escuta usa o microfone do PC (ou da webcam USB).",
         "it": "Smartphone: app «IP Webcam» (Android), indirizzo come http://192.168.1.20:8080/video.\n"
+              "Videocamera su Internet (nido, mangiatoia): incolli l'indirizzo della pagina YouTube o del flusso,\n"
+              "e imposti la posizione sul luogo della videocamera. Il microfono del PC non è usato per le sue visite.\n"
               "L'ascolto usa il microfono del PC (o della webcam USB)."},
     "Enregistrer": {"en": "Save", "es": "Guardar", "de": "Speichern", "pt": "Salvar", "it": "Salva"},
     "Espèces locales absentes de BirdNET (endémiques…) : Becquée apprend leurs chants (iNaturalist, xeno-canto, "

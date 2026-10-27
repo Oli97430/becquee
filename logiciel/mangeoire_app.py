@@ -481,6 +481,8 @@ class App:
         ttk.Button(f, text=_("Compléter les chants"), command=completer).grid(row=r, column=2, padx=(8, 0), pady=(6, 0))
         tk.Label(f, justify="left", bg=CARTE, fg=DISCRET, font=("Segoe UI", 9), text=_(
             "Smartphone : appli « IP Webcam » (Android), adresse du type http://192.168.1.20:8080/video.\n"
+            "Caméra sur Internet (nid, mangeoire) : collez l'adresse de la page YouTube ou du flux,\n"
+            "et réglez la position sur le lieu de la caméra. Le micro du PC n'est pas utilisé pour ses visites.\n"
             "L'écoute utilise le micro du PC (ou de la webcam USB).")).grid(
             row=next(lig), column=0, columnspan=3, sticky="w", pady=(12, 0))
 

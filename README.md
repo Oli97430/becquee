@@ -131,7 +131,8 @@ Au premier lancement, les modèles (~800 Mo) sont téléchargés depuis Hugging 
 1. **Premier lancement** : la fenêtre *Réglages* s'ouvre. Tapez votre ville dans *Position de la mangeoire* et cliquez sur **Chercher**, puis **Enregistrer**. Becquée télécharge la liste des oiseaux de votre région.
 2. **Caméra** :
    - **Webcam USB** : la poser objectif contre la vitre, choisir « Webcam 0 » ;
-   - **Smartphone Android** : appli *IP Webcam* → « Démarrer le serveur », puis saisir l'adresse affichée dans le champ Caméra, par ex. `http://192.168.1.20:8080/video` (téléphone sur secteur).
+   - **Smartphone Android** : appli *IP Webcam* → « Démarrer le serveur », puis saisir l'adresse affichée dans le champ Caméra, par ex. `http://192.168.1.20:8080/video` (téléphone sur secteur) ;
+   - **Caméra sur Internet** (nid, mangeoire filmés en direct) : coller l'adresse de la page YouTube (ou Twitch…, lue par [yt-dlp](https://github.com/yt-dlp/yt-dlp)) ou d'un flux `.m3u8`, et régler la *Position* sur le lieu de la caméra. Le micro du PC n'est pas utilisé pour ces visites.
 3. **Démarrer** : la vidéo s'affiche ; cadre vert = mouvement, cadre ambré = oiseau détecté, « REC » pendant une visite, espèce en surimpression.
 4. **Corriger** : clic droit sur une visite → bonne espèce, *Autre espèce…* (nom commun ou scientifique) ou *Pas un oiseau*. Becquée apprend aussitôt.
 
@@ -191,7 +192,7 @@ python logiciel/mangeoire_cam.py --source enregistrement.mp4 --dossier sortie --
 python logiciel/chants_complement.py --position -21.1 55.5 --cle-xeno-canto VOTRE_CLE
 ```
 
-`--source` : index de webcam, URL du flux du smartphone, flux RTSP ou fichier vidéo. `--help` pour toutes les options (sensibilité, seuil, durée des clips, ménage…).
+`--source` : index de webcam, URL du flux du smartphone, flux RTSP, page d'une caméra en direct (YouTube…) ou fichier vidéo. `--help` pour toutes les options (sensibilité, seuil, durée des clips, ménage…).
 
 ---
 

@@ -133,7 +133,8 @@ On first launch, the models (~800 MB) are downloaded from Hugging Face and GitHu
 1. **First launch**: the *Settings* window opens. Type your town in *Feeder location*, click **Search**, then **Save**. Becquée downloads the list of birds in your area.
 2. **Camera**:
    - **USB webcam**: place it lens against the window, pick "Webcam 0";
-   - **Android smartphone**: *IP Webcam* app → "Start server", then type the address it shows into the Camera field, e.g. `http://192.168.1.20:8080/video` (keep the phone plugged in).
+   - **Android smartphone**: *IP Webcam* app → "Start server", then type the address it shows into the Camera field, e.g. `http://192.168.1.20:8080/video` (keep the phone plugged in);
+   - **Camera on the Internet** (live nest or feeder cam): paste the address of the YouTube page (or Twitch…, read by [yt-dlp](https://github.com/yt-dlp/yt-dlp)) or of an `.m3u8` stream, and set the *Position* to the camera's location. The PC microphone is not used for these visits.
 3. **Start**: the video appears; green box = motion, amber box = bird detected, "REC" during a visit, species overlaid.
 4. **Correct**: right-click a visit → right species, *Other species…* (common or scientific name) or *Not a bird*. Becquée learns at once.
 
@@ -189,7 +190,7 @@ python logiciel/mangeoire_cam.py --source recording.mp4 --dossier output --posit
 python logiciel/chants_complement.py --position -21.1 55.5 --cle-xeno-canto YOUR_KEY
 ```
 
-`--source`: webcam index, smartphone stream URL, RTSP stream or video file. `--help` lists every option (sensitivity, threshold, clip length, cleanup…).
+`--source`: webcam index, smartphone stream URL, RTSP stream, live camera page (YouTube…) or video file. `--help` lists every option (sensitivity, threshold, clip length, cleanup…).
 
 ---
 

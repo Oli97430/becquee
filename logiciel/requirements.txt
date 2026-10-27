@@ -9,3 +9,4 @@ sounddevice>=0.4
 soundfile>=0.12
 onnx>=1.16
 av>=12.0
+yt-dlp>=2024.12

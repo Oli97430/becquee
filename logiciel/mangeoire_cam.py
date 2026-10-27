@@ -8,6 +8,8 @@ Source vidéo :
   - webcam USB            : --source 0
   - smartphone (Android, appli "IP Webcam") : --source http://IP:8080/video
   - flux RTSP             : --source rtsp://...
+  - caméra sur Internet   : --source https://www.youtube.com/watch?v=...  (page lue par yt-dlp)
+                            ou adresse directe d'un flux (.m3u8...)
   - fichier vidéo         : --source enregistrement.mp4  (analyse a posteriori)
 
 Pour chaque visite :
@@ -28,6 +30,7 @@ Modèles (fonctionnent partout dans le monde) :
 
 import argparse
 import csv
+import ipaddress
 import json
 import threading
 import time
@@ -72,10 +75,43 @@ def source_depuis_texte(texte):
     return int(texte) if texte.isdigit() else texte
 
 
+def est_flux_web(source):
+    """Flux venu d'Internet (page YouTube, flux HLS d'un nid...) : ni webcam, ni fichier,
+    ni appareil du réseau local (smartphone « IP Webcam », caméra RTSP de la maison)."""
+    if not isinstance(source, str) or "://" not in source:
+        return False
+    hote = urllib.parse.urlparse(source).hostname or ""
+    try:
+        return not ipaddress.ip_address(hote).is_private
+    except ValueError:
+        return hote != "localhost" and not hote.endswith(".local")
+
+
+def resoudre_flux(source):
+    """Page web d'une caméra en direct (YouTube, Twitch...) -> adresse du flux vidéo, avec yt-dlp.
+    À refaire à chaque connexion : les adresses YouTube expirent au bout de quelques heures.
+    Un flux direct (.m3u8, .mp4, rtsp...) ou une page inconnue de yt-dlp est rendu tel quel."""
+    if not est_flux_web(source) or not source.startswith("http"):
+        return source
+    if Path(urllib.parse.urlparse(source).path).suffix.lower() in (".m3u8", ".mpd", ".mp4", ".ts", ".flv",
+                                                                  ".mjpg", ".mjpeg", ".jpg"):
+        return source
+    try:
+        import yt_dlp
+        options = {"quiet": True, "no_warnings": True, "noplaylist": True,
+                   "format": "bestvideo[height<=720]/best[height<=720]/best"}   # le son n'est pas utilisé
+        with yt_dlp.YoutubeDL(options) as ydl:
+            return ydl.extract_info(source, download=False)["url"]
+    except Exception:
+        return source
+
+
 def ouvrir_source(source):
     """Ouvre la caméra et lit une première image : (capture, image) ou (None, None).
     Webcam : Media Foundation d'abord, puis DirectShow (certaines webcams s'ouvrent
     sous Media Foundation mais ne renvoient plus d'images)."""
+    if isinstance(source, str):
+        source = resoudre_flux(source)
     essais = [(source, cv2.CAP_MSMF), (source, cv2.CAP_DSHOW)] if isinstance(source, int) else [(source, cv2.CAP_ANY)]
     for src, api in essais:
         camera = cv2.VideoCapture(src, api)
@@ -844,6 +880,7 @@ class Surveillance:
                  filtre_oiseaux=True, garder_sans_oiseau=False, detecteur_oiseaux=None, ecoute=None,
                  seuil_chant=0.7, menage_jours=60, menage_go=20.0):
         self.source = source_depuis_texte(source)
+        self.flux_web = est_flux_web(self.source)    # le micro du PC n'entend pas ce nid lointain
         self.dossier = Path(dossier)
         self.seuil, self.surface = seuil, surface
         self.avant, self.apres, self.duree_max = avant, apres, duree_max
@@ -907,7 +944,8 @@ class Surveillance:
             return
 
         source = "image" if espece != "Inconnu" else ""
-        chants = self.ecoute.entre(visite.debut - timedelta(seconds=self.avant), datetime.now()) if self.ecoute else []
+        ecoute = None if self.flux_web else self.ecoute
+        chants = ecoute.entre(visite.debut - timedelta(seconds=self.avant), datetime.now()) if ecoute else []
         if chants:
             meilleur, conf_chant = chants[0]
             if espece == "Inconnu" and conf_chant >= self.seuil_chant:
@@ -915,7 +953,7 @@ class Surveillance:
             elif cle_espece(meilleur) == cle_espece(espece):
                 source, confiance = "image+chant", max(confiance, conf_chant)
 
-        if source.startswith("image") and confiance >= 0.9:
+        if source.startswith("image") and confiance >= 0.9 and ecoute:
             self._garder_son(visite, espece)
         video = visite.chemin_video.with_name(f"{visite.base.name}_{nom_fichier(espece)}.mp4")
         visite.chemin_video.rename(video)
@@ -1059,7 +1097,8 @@ class Surveillance:
 # ------------------------------------------------------------------
 def main():
     p = argparse.ArgumentParser(description="Becquée : enregistrement + reconnaissance des oiseaux")
-    p.add_argument("--source", default="0", help="index webcam (0, 1...), URL du flux du smartphone, ou fichier vidéo")
+    p.add_argument("--source", default="0", help="index webcam (0, 1...), URL du flux du smartphone, "
+                                                 "page d'une caméra en direct (YouTube...), ou fichier vidéo")
     p.add_argument("--dossier", default="visites", help="dossier des clips, photos et du journal")
     p.add_argument("--modeles", default=str(Path(__file__).resolve().parent / "modeles"),
                    help="dossier des modèles et listes d'espèces (BirdNET, caches)")
