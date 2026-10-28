@@ -33,4 +33,24 @@
     <string name="especes_hors_ligne">iNaturalist list unavailable (%1$s): using BirdNET list</string>
     <string name="analyse_terminee">Video analysis finished</string>
     <string name="slogan">the bird feeder that knows its visitors</string>
+    <string name="onglet_galerie">Gallery</string>
+    <string name="onglet_stats">Stats</string>
+    <string name="galerie_vide">The best photo of each species will appear here.</string>
+    <string name="jours_7">7 days</string>
+    <string name="jours_30">30 days</string>
+    <string name="tout">All</string>
+    <string name="stat_visites">visits</string>
+    <string name="stat_especes">species</string>
+    <string name="stat_plus_frequente">most frequent species</string>
+    <string name="visites_par_espece">Visits by species</string>
+    <string name="visites_par_heure">Visits by hour</string>
+    <string name="visites_par_jour">Visits by day</string>
+    <string name="aucune_visite_periode">No visits in this period</string>
+    <string name="menage">Cleanup: old clips deleted: %1$d</string>
+    <string name="menage_titre">Automatic cleanup</string>
+    <string name="menage_jours">Delete clips older than %1$d days</string>
+    <string name="menage_go">Maximum folder size: %1$d GB</string>
+    <string name="menage_aide">The gallery and the log are never deleted. Below 1 GB free space, the oldest clips go.</string>
+    <string name="tenir_paysage">Hold the phone horizontally, facing the feeder.</string>
+    <string name="son_clips">Record sound in clips</string>
 </resources>

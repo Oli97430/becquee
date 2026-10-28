@@ -79,7 +79,7 @@ data class Vue(
 private class Image420(val donnees: ByteArray, val tempsUs: Long)
 
 /** Un clip en cours, avec les avis du reconnaisseur sur les images analysées. */
-private class Visite(dossier: File, fps: Int, largeur: Int, hauteur: Int, avant: List<Image420>) {
+private class Visite(dossier: File, fps: Int, largeur: Int, hauteur: Int, avant: List<Image420>, private val micro: Micro?) {
     val debut = Date()
     val base: String = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(debut).let { b ->
         var n = b
@@ -88,7 +88,8 @@ private class Visite(dossier: File, fps: Int, largeur: Int, hauteur: Int, avant:
         n
     }
     val video = File(dossier, "${base}_en_cours.mp4")
-    val enregistreur = Enregistreur(video, largeur, hauteur, fps)
+    val enregistreur = Enregistreur(video, largeur, hauteur, fps, micro?.frequence)
+    private var dernierSonUs = Long.MIN_VALUE
     val scores = mutableMapOf<String, MutableList<Float>>()
     val premiers = mutableMapOf<String, Int>()          // nb d'analyses où l'espèce arrive en tête
     var meilleure: Triple<Float, Trame, Boite?>? = null  // (confiance, image, oiseau recadré)
@@ -98,7 +99,16 @@ private class Visite(dossier: File, fps: Int, largeur: Int, hauteur: Int, avant:
     var dernierUs = -1L
     var nbImages = 0
 
-    init { avant.forEach { ecrire(it) } }
+    init { avant.forEach { ecrire(it) }; ecrireSon() }
+
+    /** Son entendu depuis le dernier morceau écrit (le premier appel reprend les secondes d'avant). */
+    fun ecrireSon() {
+        val m = micro ?: return
+        for (morceau in m.depuis(dernierSonUs)) {
+            enregistreur.ecrireAudio(morceau.pcm, morceau.tempsUs)
+            dernierSonUs = morceau.tempsUs
+        }
+    }
 
     fun ecrire(i: Image420) {
         enregistreur.ecrire(i.donnees, i.tempsUs)
@@ -114,9 +124,14 @@ private class Visite(dossier: File, fps: Int, largeur: Int, hauteur: Int, avant:
         if (score > (meilleure?.first ?: 0f)) meilleure = Triple(score, t, recadrage)
     }
 
+    /** Espèce déjà sûre (4 fois en tête, à 90 % au moins, sans concurrente) : inutile de la reconnaître
+     *  encore ; le détecteur continue de suivre l'oiseau pour la durée de la visite et la photo. */
+    fun especeSure() = premiers.size == 1 && premiers.values.first() >= 4 && (scores[premiers.keys.first()]?.max() ?: 0f) >= 0.9f
+
     /** Espèce retenue = vote sur toute la visite : elle doit arriver en tête sur au moins la moitié
      *  des analyses et atteindre le seuil au moins une fois. */
     fun conclure(seuil: Float): Pair<String, Float> {
+        ecrireSon()
         enregistreur.terminer()
         if (scores.isEmpty()) return INCONNU to 0f
         val espece = scores.maxBy { it.value.sum() }.key
@@ -150,6 +165,9 @@ class Surveillance(
     private val analyseToutes: Double = 0.5,
     var filtreOiseaux: Boolean = true,
     private val garderSansOiseau: Boolean = false,
+    private val menageJours: Int = 60,
+    private val menageGo: Float = 10f,
+    private val micro: Micro? = null,
     private val surImage: (Trame, Vue) -> Unit = { _, _ -> },
     private val surVisite: (Map<String, String>) -> Unit = {},
     private val surMessage: (String) -> Unit = {},
@@ -166,12 +184,28 @@ class Surveillance(
         surMessage(texte)
     }
 
+    private var nbAnalyses = 0
+    private var dureeAnalyses = 0L
+    private var dureeDetecteur = 0L
+
     private fun analyser(visite: Visite, t: Trame, boite: Boite?): Analyse {
+        val debut = System.nanoTime()
+        return analyser1(visite, t, boite).also {
+            // temps moyen d'une analyse (détecteur + BioCLIP), noté toutes les 20 analyses
+            dureeAnalyses += System.nanoTime() - debut
+            if (++nbAnalyses % 20 == 0) Log.i("Becquee", "analyse : ${dureeAnalyses / nbAnalyses / 1_000_000} ms en moyenne " +
+                "dont détecteur ${dureeDetecteur / nbAnalyses / 1_000_000} ms ($nbAnalyses)")
+        }
+    }
+
+    private fun analyser1(visite: Visite, t: Trame, boite: Boite?): Analyse {
         var oiseaux = emptyList<Pair<Float, Boite>>()
         var confirmation = 1f
         val cible: Boite?
         if (filtreOiseaux) {
+            val d = System.nanoTime()
             oiseaux = detecteurOiseaux.detecter(t)
+            dureeDetecteur += System.nanoTime() - d
             if (oiseaux.isEmpty() && boite != null) {
                 // le détecteur rate certains oiseaux (pose, contre-jour...) : BioCLIP juge la zone en
                 // mouvement ; il faut deux avis sûrs pour valider une visite
@@ -180,7 +214,7 @@ class Surveillance(
             }
             cible = oiseaux.firstOrNull()?.second
         } else cible = boite
-        if (cible == null) return Analyse(visite, t, oiseaux, confirmation, null, null)
+        if (cible == null || visite.especeSure()) return Analyse(visite, t, oiseaux, confirmation, null, null)
         val recadrage = Images.recadrer(t.largeur, t.hauteur, cible)
         return Analyse(visite, t, oiseaux, confirmation, reconnaisseur.classer(t, recadrage), recadrage)
     }
@@ -189,6 +223,8 @@ class Surveillance(
         dossier.mkdirs()
         // clips d'une session interrompue (appli tuée) : illisibles, effacés
         dossier.listFiles { f -> f.name.endsWith("_en_cours.mp4") }?.forEach { it.delete() }
+        menage()
+        Rangement.construireGalerie(dossier)
         message(context.getString(R.string.chargement_modeles))
         reconnaisseur.charger()
         detecteurOiseaux.charger()
@@ -250,7 +286,7 @@ class Surveillance(
                 if (boite != null) {
                     dernierMouvement = maintenant
                     if (visite == null) {
-                        visite = Visite(dossier, source.fps.toInt(), largeur, hauteur, tampon.toList())
+                        visite = Visite(dossier, source.fps.toInt(), largeur, hauteur, tampon.toList(), micro)
                         tampon.clear()
                         message(context.getString(R.string.debut_enregistrement))
                     }
@@ -259,6 +295,7 @@ class Surveillance(
                 val v = visite
                 if (v != null) {
                     v.ecrire(Image420(Images.versI420(t), t.tempsUs))
+                    v.ecrireSon()
                     enCours?.let { f -> if (f.isDone) { enCours = null; runCatching { f.get() }.getOrNull()?.let { appliquer(it, maintenant) } } }
                     if (enCours == null && maintenant - derniereAnalyse >= analyseToutes && (boite != null || oiseaux.isNotEmpty())) {
                         derniereAnalyse = maintenant
@@ -330,7 +367,14 @@ class Surveillance(
             "source" to if (espece != INCONNU) "image" else "", "chants" to "", "corrige" to "",
         )
         journal.ajouter(ligne)
+        Rangement.garderDansGalerie(dossier, ligne)
         message(context.getString(R.string.fin_visite, afficher(espece), (confiance * 100).toInt(), duree.toInt()))
         surVisite(ligne)
+        menage()
+    }
+
+    private fun menage() {
+        val n = Rangement.nettoyer(dossier, menageJours, menageGo)
+        if (n > 0) message(context.getString(R.string.menage, n))
     }
 }

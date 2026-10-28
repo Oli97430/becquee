@@ -34,4 +34,24 @@
     <string name="especes_hors_ligne">Liste iNaturalist indisponible (%1$s) : liste BirdNET</string>
     <string name="analyse_terminee">Analyse de la vidéo terminée</string>
     <string name="slogan">la mangeoire qui reconnaît ses visiteurs</string>
+    <string name="onglet_galerie">Galerie</string>
+    <string name="onglet_stats">Stats</string>
+    <string name="galerie_vide">La meilleure photo de chaque espèce apparaîtra ici.</string>
+    <string name="jours_7">7 jours</string>
+    <string name="jours_30">30 jours</string>
+    <string name="tout">Tout</string>
+    <string name="stat_visites">visites</string>
+    <string name="stat_especes">espèces</string>
+    <string name="stat_plus_frequente">espèce la plus fréquente</string>
+    <string name="visites_par_espece">Visites par espèce</string>
+    <string name="visites_par_heure">Visites par heure</string>
+    <string name="visites_par_jour">Visites par jour</string>
+    <string name="aucune_visite_periode">Aucune visite sur cette période</string>
+    <string name="menage">Ménage : anciens clips effacés : %1$d</string>
+    <string name="menage_titre">Ménage automatique</string>
+    <string name="menage_jours">Effacer les clips de plus de %1$d jours</string>
+    <string name="menage_go">Taille maximale du dossier : %1$d Go</string>
+    <string name="menage_aide">La galerie et le journal ne sont jamais effacés. En dessous de 1 Go libre, les plus vieux clips partent.</string>
+    <string name="tenir_paysage">Couchez le téléphone à l\'horizontale face à la mangeoire.</string>
+    <string name="son_clips">Enregistrer le son dans les clips</string>
 </resources>

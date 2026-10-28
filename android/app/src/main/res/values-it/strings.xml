@@ -33,4 +33,24 @@
     <string name="especes_hors_ligne">Lista iNaturalist non disponibile (%1$s): lista BirdNET</string>
     <string name="analyse_terminee">Analisi del video terminata</string>
     <string name="slogan">la mangiatoia che riconosce i suoi visitatori</string>
+    <string name="onglet_galerie">Galleria</string>
+    <string name="onglet_stats">Statistiche</string>
+    <string name="galerie_vide">La foto migliore di ogni specie apparirà qui.</string>
+    <string name="jours_7">7 giorni</string>
+    <string name="jours_30">30 giorni</string>
+    <string name="tout">Tutto</string>
+    <string name="stat_visites">visite</string>
+    <string name="stat_especes">specie</string>
+    <string name="stat_plus_frequente">specie più frequente</string>
+    <string name="visites_par_espece">Visite per specie</string>
+    <string name="visites_par_heure">Visite per ora</string>
+    <string name="visites_par_jour">Visite per giorno</string>
+    <string name="aucune_visite_periode">Nessuna visita in questo periodo</string>
+    <string name="menage">Pulizia: vecchie clip eliminate: %1$d</string>
+    <string name="menage_titre">Pulizia automatica</string>
+    <string name="menage_jours">Elimina clip più vecchie di %1$d giorni</string>
+    <string name="menage_go">Dimensione massima della cartella: %1$d GB</string>
+    <string name="menage_aide">La galleria e il registro non vengono mai eliminati. Sotto 1 GB libero, le clip più vecchie vengono eliminate.</string>
+    <string name="tenir_paysage">Metti il telefono in orizzontale davanti alla mangiatoia.</string>
+    <string name="son_clips">Registra l\'audio nelle clip</string>
 </resources>

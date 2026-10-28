@@ -33,4 +33,24 @@
     <string name="especes_hors_ligne">iNaturalist-Liste nicht verfügbar (%1$s): BirdNET-Liste</string>
     <string name="analyse_terminee">Videoanalyse abgeschlossen</string>
     <string name="slogan">das Futterhaus, das seine Besucher erkennt</string>
+    <string name="onglet_galerie">Galerie</string>
+    <string name="onglet_stats">Statistik</string>
+    <string name="galerie_vide">Das beste Foto jeder Art erscheint hier.</string>
+    <string name="jours_7">7 Tage</string>
+    <string name="jours_30">30 Tage</string>
+    <string name="tout">Alles</string>
+    <string name="stat_visites">Besuche</string>
+    <string name="stat_especes">Arten</string>
+    <string name="stat_plus_frequente">häufigste Art</string>
+    <string name="visites_par_espece">Besuche pro Art</string>
+    <string name="visites_par_heure">Besuche pro Stunde</string>
+    <string name="visites_par_jour">Besuche pro Tag</string>
+    <string name="aucune_visite_periode">Keine Besuche in diesem Zeitraum</string>
+    <string name="menage">Aufräumen: alte Clips gelöscht: %1$d</string>
+    <string name="menage_titre">Automatisches Aufräumen</string>
+    <string name="menage_jours">Clips löschen, älter als %1$d Tage</string>
+    <string name="menage_go">Maximale Ordnergröße: %1$d GB</string>
+    <string name="menage_aide">Galerie und Protokoll werden nie gelöscht. Unter 1 GB freiem Speicher werden die ältesten Clips gelöscht.</string>
+    <string name="tenir_paysage">Das Telefon quer vor das Futterhaus legen.</string>
+    <string name="son_clips">Ton in den Clips aufnehmen</string>
 </resources>

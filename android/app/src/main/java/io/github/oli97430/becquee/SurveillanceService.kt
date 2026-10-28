@@ -9,7 +9,10 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.SystemClock
 import android.util.Size
+import android.view.OrientationEventListener
+import android.view.Surface
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.resolutionselector.AspectRatioStrategy
@@ -58,6 +61,7 @@ class SurveillanceService : LifecycleService() {
     }
 
     private var camera: ProcessCameraProvider? = null
+    private var orientation: OrientationEventListener? = null
     private val executeur = Executors.newSingleThreadExecutor()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -83,10 +87,20 @@ class SurveillanceService : LifecycleService() {
     }
 
     private fun demarrer(action: String, video: Uri?) {
-        val type = if (action == CAMERA) ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA else ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        val reglages = Reglages(this)
+        Modeles.acceleration = reglages.acceleration
+        Modeles.fils = reglages.fils
+        // son des clips : seulement avec la caméra, si l'utilisateur l'a permis
+        val avecSon = action == CAMERA && reglages.son &&
+            ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val type = when {
+            action != CAMERA -> ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            avecSon -> ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+            else -> ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+        }
         startForeground(1, notification(), type)
         Etat.marche.value = action
-        val reglages = Reglages(this)
+        val micro = if (avecSon) runCatching { Micro() }.getOrNull() else null
         val source: Source = try {
             if (action == CAMERA) SourceCamera().also { ouvrirCamera(it) } else SourceFichier(this, video!!)
         } catch (e: Exception) {
@@ -103,6 +117,7 @@ class SurveillanceService : LifecycleService() {
         val s = Surveillance(
             this, source, dossier, reconnaisseur, DetecteurOiseaux(this),
             seuil = reglages.seuil, surface = reglages.surface, filtreOiseaux = reglages.filtreOiseaux,
+            menageJours = reglages.menageJours, menageGo = reglages.menageGo, micro = micro,
             surImage = { t, vue ->
                 // l'écran n'a pas besoin de toutes les images
                 if (Etat.image.value == null || vue.enregistrement || (t.tempsUs / 66_000) % 2 == 0L) Etat.image.value = t.bitmap()
@@ -120,6 +135,7 @@ class SurveillanceService : LifecycleService() {
                 android.util.Log.e("Becquee", "moteur", e)
                 Etat.message(getString(R.string.source_erreur, e.javaClass.simpleName + ": " + e.message))
             } finally {
+                micro?.arreter()
                 Etat.surveillance = null
                 android.os.Handler(mainLooper).post { arreterService() }
             }
@@ -136,7 +152,18 @@ class SurveillanceService : LifecycleService() {
                 .build())
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .setTargetRotation(Surface.ROTATION_90)
             .build()
+        // images toujours en largeur (640x480, comme les modèles l'attendent), à l'endroit selon le côté
+        // où le téléphone est couché ; tenu en hauteur, l'image reste en largeur (taille fixe du clip)
+        orientation = object : OrientationEventListener(this) {
+            override fun onOrientationChanged(o: Int) {
+                when (o) {
+                    in 60..120 -> analyse.targetRotation = Surface.ROTATION_270
+                    in 240..300 -> analyse.targetRotation = Surface.ROTATION_90
+                }
+            }
+        }.apply { if (canDetectOrientation()) enable() }
         analyse.setAnalyzer(executeur) { image ->
             try {
                 val plan = image.planes[0]
@@ -154,7 +181,8 @@ class SurveillanceService : LifecycleService() {
                         o += plan.pixelStride
                     }
                 }
-                source.pousser(Images.tourner(Trame(pixels, w, h, image.imageInfo.timestamp / 1000), image.imageInfo.rotationDegrees))
+                // horloge commune avec le micro : l'instant d'arrivée de l'image
+                source.pousser(Images.tourner(Trame(pixels, w, h, SystemClock.elapsedRealtimeNanos() / 1000), image.imageInfo.rotationDegrees))
             } finally {
                 image.close()
             }
@@ -164,6 +192,8 @@ class SurveillanceService : LifecycleService() {
     }
 
     private fun arreterService() {
+        orientation?.disable()
+        orientation = null
         camera?.unbindAll()
         camera = null
         Etat.marche.value = null

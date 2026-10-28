@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.location.LocationManager
 import android.net.Uri
@@ -18,12 +19,18 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as itemsGrille
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.*
@@ -37,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +67,9 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra("video")?.let { File(it).canonicalFile }?.takeIf { it.isFile && it.parentFile == dossierTest }?.let { video ->
             intent.getStringExtra("latitude")?.toDoubleOrNull()?.takeIf { it in -90.0..90.0 }?.let { Reglages(this).latitude = it }
             intent.getStringExtra("longitude")?.toDoubleOrNull()?.takeIf { it in -180.0..180.0 }?.let { Reglages(this).longitude = it }
+            // mesures de vitesse : --es acceleration cpu|xnnpack|nnapi --es fils 4
+            intent.getStringExtra("acceleration")?.takeIf { it in listOf("cpu", "xnnpack", "nnapi") }?.let { Reglages(this).acceleration = it }
+            intent.getStringExtra("fils")?.toIntOrNull()?.takeIf { it in 1..8 }?.let { Reglages(this).fils = it }
             SurveillanceService.lancer(this, SurveillanceService.FICHIER, Uri.fromFile(video))
         }
         setContent {
@@ -114,19 +125,24 @@ private fun Ecran() {
         NavigationBar(containerColor = Couleurs.carte) {
             NavigationBarItem(onglet == 0, { onglet = 0 }, { Icon(Icons.Default.Videocam, null) }, label = { Text(stringResource(R.string.onglet_direct)) })
             NavigationBarItem(onglet == 1, { onglet = 1 }, { Icon(Icons.AutoMirrored.Filled.List, null) }, label = { Text(stringResource(R.string.onglet_visites)) })
-            NavigationBarItem(onglet == 2, { onglet = 2 }, { Icon(Icons.Default.Settings, null) }, label = { Text(stringResource(R.string.onglet_reglages)) })
+            NavigationBarItem(onglet == 2, { onglet = 2 }, { Icon(Icons.Default.PhotoLibrary, null) }, label = { Text(stringResource(R.string.onglet_galerie)) })
+            NavigationBarItem(onglet == 3, { onglet = 3 }, { Icon(Icons.Default.BarChart, null) }, label = { Text(stringResource(R.string.onglet_stats)) })
+            NavigationBarItem(onglet == 4, { onglet = 4 }, { Icon(Icons.Default.Settings, null) }, label = { Text(stringResource(R.string.onglet_reglages)) })
         }
     }) { marges ->
         Box(Modifier.padding(marges).fillMaxSize()) {
             when (onglet) {
                 0 -> Direct()
                 1 -> Visites()
+                2 -> Galerie()
+                3 -> Statistiques()
                 else -> ReglagesEcran()
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Direct() {
     val context = LocalContext.current
@@ -140,10 +156,11 @@ private fun Direct() {
     val permissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
         if (r[Manifest.permission.CAMERA] == true) SurveillanceService.lancer(context, SurveillanceService.CAMERA)
     }
-    Column(Modifier.fillMaxSize().padding(12.dp)) {
-        Box(Modifier.fillMaxWidth().weight(1f).background(Color(0xFF05080B)), contentAlignment = Alignment.Center) {
+    val paysage = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val imageDirect = @Composable { m: Modifier ->
+        Box(m.background(Color(0xFF05080B)), contentAlignment = Alignment.Center) {
             val b = image
-            if (b == null) Text(stringResource(R.string.aucune_image))
+            if (b == null) Text(stringResource(R.string.aucune_image), Modifier.padding(16.dp))
             else {
                 Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                 Canvas(Modifier.fillMaxSize()) {
@@ -158,24 +175,38 @@ private fun Direct() {
                 }
             }
         }
-        Text(buildString {
-            if (marche != null) append(String.format(Locale.getDefault(), "%.0f i/s", vue.fps))
-            if (vue.enregistrement) append("  ●  " + String.format(Locale.getDefault(), "%.0f s", vue.duree))
-            if (vue.etiquette.isNotEmpty()) append("  ${vue.etiquette}")
-        }, fontWeight = FontWeight.Bold)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-            if (marche == null) {
-                Button({
-                    val demandees = mutableListOf(Manifest.permission.CAMERA)
-                    if (Build.VERSION.SDK_INT >= 33) demandees.add(Manifest.permission.POST_NOTIFICATIONS)
-                    permissions.launch(demandees.toTypedArray())
-                }) { Text(stringResource(R.string.demarrer)) }
-                OutlinedButton({ choisirVideo.launch(arrayOf("video/*")) }) { Text(stringResource(R.string.analyser_video)) }
-            } else Button({ SurveillanceService.lancer(context, SurveillanceService.ARRETER) }) { Text(stringResource(R.string.arreter)) }
+    }
+    val commandes = @Composable { m: Modifier ->
+        Column(m) {
+            Text(buildString {
+                if (marche != null) append(String.format(Locale.getDefault(), "%.0f i/s", vue.fps))
+                if (vue.enregistrement) append("  ●  " + String.format(Locale.getDefault(), "%.0f s", vue.duree))
+                if (vue.etiquette.isNotEmpty()) append("  ${vue.etiquette}")
+            }, fontWeight = FontWeight.Bold)
+            // les modèles attendent une image en largeur : la mangeoire se filme téléphone couché
+            if (marche == SurveillanceService.CAMERA && !paysage)
+                Text(stringResource(R.string.tenir_paysage), color = Couleurs.ambre, style = MaterialTheme.typography.bodySmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
+                if (marche == null) {
+                    Button({
+                        val demandees = mutableListOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+                        if (Build.VERSION.SDK_INT >= 33) demandees.add(Manifest.permission.POST_NOTIFICATIONS)
+                        permissions.launch(demandees.toTypedArray())
+                    }) { Text(stringResource(R.string.demarrer)) }
+                    OutlinedButton({ choisirVideo.launch(arrayOf("video/*")) }) { Text(stringResource(R.string.analyser_video)) }
+                } else Button({ SurveillanceService.lancer(context, SurveillanceService.ARRETER) }) { Text(stringResource(R.string.arreter)) }
+            }
+            Column(Modifier.heightIn(max = 140.dp).verticalScroll(rememberScrollState())) {
+                messages.takeLast(8).reversed().forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+            }
         }
-        Column(Modifier.height(110.dp).verticalScroll(rememberScrollState())) {
-            messages.takeLast(8).reversed().forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
-        }
+    }
+    if (paysage) Row(Modifier.fillMaxSize().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        imageDirect(Modifier.weight(1f).fillMaxHeight())
+        commandes(Modifier.width(260.dp).verticalScroll(rememberScrollState()))
+    } else Column(Modifier.fillMaxSize().padding(12.dp)) {
+        imageDirect(Modifier.fillMaxWidth().weight(1f))
+        commandes(Modifier.fillMaxWidth())
     }
 }
 
@@ -219,13 +250,13 @@ private fun Visites() {
 }
 
 @Composable
-private fun Miniature(photo: File) {
+private fun Miniature(photo: File, m: Modifier = Modifier.size(96.dp, 72.dp), echantillon: Int = 4) {
     val b by produceState<android.graphics.Bitmap?>(null, photo) {
         value = withContext(Dispatchers.IO) {
-            if (!photo.isFile) null else BitmapFactory.decodeFile(photo.path, BitmapFactory.Options().apply { inSampleSize = 4 })
+            if (!photo.isFile) null else BitmapFactory.decodeFile(photo.path, BitmapFactory.Options().apply { inSampleSize = echantillon })
         }
     }
-    Box(Modifier.size(96.dp, 72.dp)) {
+    Box(m) {
         b?.let { Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
     }
 }
@@ -286,6 +317,9 @@ private fun ReglagesEcran() {
     var seuil by remember { mutableFloatStateOf(r.seuil) }
     var surface by remember { mutableFloatStateOf(r.surface) }
     var filtre by remember { mutableStateOf(r.filtreOiseaux) }
+    var son by remember { mutableStateOf(r.son) }
+    var menageJours by remember { mutableIntStateOf(r.menageJours) }
+    var menageGo by remember { mutableFloatStateOf(r.menageGo) }
     fun lirePosition() {
         val lm = context.getSystemService(LocationManager::class.java)
         val p = lm.getProviders(true).mapNotNull { lm.getLastKnownLocation(it) }.maxByOrNull { it.time } ?: return
@@ -313,7 +347,144 @@ private fun ReglagesEcran() {
             Switch(filtre, { filtre = it; r.filtreOiseaux = it; Etat.surveillance?.filtreOiseaux = it })
             Text(stringResource(R.string.filtre_oiseaux), Modifier.padding(start = 12.dp))
         }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Switch(son, { son = it; r.son = it })
+            Text(stringResource(R.string.son_clips), Modifier.padding(start = 12.dp))
+        }
+        HorizontalDivider()
+        Text(stringResource(R.string.menage_titre), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.menage_aide), style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.menage_jours, menageJours))
+        Slider(menageJours.toFloat(), { menageJours = it.toInt(); r.menageJours = menageJours }, valueRange = 7f..365f)
+        Text(stringResource(R.string.menage_go, menageGo.toInt()))
+        Slider(menageGo, { menageGo = it.toInt().toFloat(); r.menageGo = menageGo }, valueRange = 1f..50f)
         HorizontalDivider()
         Text(stringResource(R.string.dossier, dossierVisites(context).path), style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun Galerie() {
+    val context = LocalContext.current
+    val version by Etat.versionJournal.collectAsStateWithLifecycle()
+    val dossier = remember { dossierVisites(context) }
+    var photos by remember { mutableStateOf(emptyList<Pair<String, org.json.JSONObject>>()) }
+    LaunchedEffect(version) {
+        photos = withContext(Dispatchers.IO) {
+            Rangement.construireGalerie(dossier)
+            val index = Rangement.lireGalerie(dossier)
+            index.keys().asSequence().map { it to index.getJSONObject(it) }.sortedBy { it.first }.toList()
+        }
+    }
+    if (photos.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.galerie_vide), Modifier.padding(24.dp)) }
+        return
+    }
+    // la meilleure photo de chaque espèce (le ménage n'y touche pas)
+    LazyVerticalGrid(GridCells.Adaptive(160.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        itemsGrille(photos, key = { it.first }) { (espece, e) ->
+            Card(colors = CardDefaults.cardColors(containerColor = Couleurs.carte, contentColor = Couleurs.texte),
+                modifier = Modifier.clickable { ouvrirClip(context, File(dossier, File(e.optString("video")).name)) }) {
+                Column {
+                    Miniature(File(dossier, e.optString("photo")), Modifier.fillMaxWidth().aspectRatio(1f), echantillon = 1)
+                    Column(Modifier.padding(8.dp)) {
+                        Text(espece, fontWeight = FontWeight.Bold, maxLines = 2)
+                        Text("${e.optString("date")}  ·  ${((e.optString("confiance").toFloatOrNull() ?: 0f) * 100).toInt()} %",
+                            style = MaterialTheme.typography.bodySmall, color = Couleurs.discret)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Statistiques() {
+    val context = LocalContext.current
+    val version by Etat.versionJournal.collectAsStateWithLifecycle()
+    var visites by remember { mutableStateOf(emptyList<Map<String, String>>()) }
+    var jours by rememberSaveable { mutableIntStateOf(30) }
+    LaunchedEffect(version) {
+        visites = withContext(Dispatchers.IO) { Journal(dossierVisites(context)).lire().filter { it["espece"] != PAS_UN_OISEAU } }
+    }
+    val format = remember { java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US) }
+    val maintenant = System.currentTimeMillis()
+    val debut = if (jours > 0) format.format(java.util.Date(maintenant - (jours - 1) * 86_400_000L)) else ""
+    val choix = visites.filter { it["date"].orEmpty() >= debut }
+    val especes = choix.filter { it["espece"] != INCONNU }.groupingBy { it["espece"].orEmpty() }.eachCount()
+        .entries.sortedByDescending { it.value }
+    Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for ((valeur, texte) in listOf(7 to R.string.jours_7, 30 to R.string.jours_30, 0 to R.string.tout))
+                FilterChip(jours == valeur, { jours = valeur }, { Text(stringResource(texte)) })
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Chiffre(choix.size.toString(), stringResource(R.string.stat_visites), Modifier.weight(1f))
+            Chiffre(especes.size.toString(), stringResource(R.string.stat_especes), Modifier.weight(1f))
+        }
+        Chiffre(especes.firstOrNull()?.key ?: "—", stringResource(R.string.stat_plus_frequente), Modifier.fillMaxWidth())
+        Carte(stringResource(R.string.visites_par_espece)) {
+            if (especes.isEmpty()) Text(stringResource(R.string.aucune_visite_periode), color = Couleurs.discret)
+            val couleurs = listOf(0xFF58A6FF, 0xFF3FB950, 0xFFD29922, 0xFFF778BA, 0xFFA371F7, 0xFF79C0FF, 0xFFFFA657, 0xFF7EE787)
+            especes.take(15).forEachIndexed { i, (espece, n) ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 3.dp)) {
+                    Text(espece, Modifier.width(140.dp), maxLines = 1, style = MaterialTheme.typography.bodySmall)
+                    Box(Modifier.weight(1f).height(12.dp)) {
+                        Box(Modifier.fillMaxWidth(n.toFloat() / especes[0].value).fillMaxHeight().background(Color(couleurs[i % couleurs.size])))
+                    }
+                    Text(" $n", style = MaterialTheme.typography.bodySmall, color = Couleurs.discret)
+                }
+            }
+        }
+        val heures = IntArray(24).also { h -> choix.forEach { l -> l["heure"]?.take(2)?.toIntOrNull()?.let { if (it in 0..23) h[it]++ } } }
+        Carte(stringResource(R.string.visites_par_heure)) { Colonnes(heures.toList(), (0 until 24).map { "${it}h" }, 3) }
+        val nbJours = if (jours > 0) jours else choix.minOfOrNull { it["date"].orEmpty() }?.let { d ->
+            runCatching { ((maintenant - format.parse(d)!!.time) / 86_400_000L).toInt() + 1 }.getOrNull() } ?: 1
+        val dates = (0 until nbJours.coerceIn(1, 366)).map { java.util.Date(maintenant - (nbJours - 1 - it) * 86_400_000L) }
+        val parJour = choix.groupingBy { it["date"].orEmpty() }.eachCount()
+        val court = remember { java.text.SimpleDateFormat("dd/MM", Locale.US) }
+        Carte(stringResource(R.string.visites_par_jour)) {
+            Colonnes(dates.map { parJour[format.format(it)] ?: 0 }, dates.map { court.format(it) }, maxOf(1, dates.size / 6))
+        }
+    }
+}
+
+@Composable
+private fun Chiffre(valeur: String, texte: String, m: Modifier) {
+    Column(m.background(Couleurs.carte, androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).padding(14.dp)) {
+        Text(valeur, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(texte, style = MaterialTheme.typography.bodySmall, color = Couleurs.discret)
+    }
+}
+
+@Composable
+private fun Carte(titre: String, contenu: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth().background(Couleurs.carte, androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).padding(14.dp)) {
+        Text(titre, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+        contenu()
+    }
+}
+
+/** Histogramme en colonnes (visites par heure, par jour), comme la fenêtre Statistiques du PC. */
+@Composable
+private fun Colonnes(valeurs: List<Int>, etiquettes: List<String>, pasEtiquette: Int) {
+    val maxi = maxOf(1, valeurs.maxOrNull() ?: 0)
+    Text("max $maxi", style = MaterialTheme.typography.labelSmall, color = Couleurs.discret, modifier = Modifier.fillMaxWidth(),
+        textAlign = androidx.compose.ui.text.style.TextAlign.End)
+    Canvas(Modifier.fillMaxWidth().height(110.dp)) {
+        val pas = size.width / valeurs.size
+        valeurs.forEachIndexed { i, v ->
+            if (v > 0) {
+                val h = size.height * v / maxi
+                drawRect(Couleurs.bleu, Offset(i * pas + pas * 0.15f, size.height - h), Size(pas * 0.7f, h))
+            }
+        }
+    }
+    Row(Modifier.fillMaxWidth()) {
+        etiquettes.forEachIndexed { i, e ->
+            Text(if (i % pasEtiquette == 0) e else "", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall,
+                color = Couleurs.discret, maxLines = 1, softWrap = false)
+        }
     }
 }

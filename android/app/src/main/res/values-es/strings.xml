@@ -33,4 +33,24 @@
     <string name="especes_hors_ligne">Lista de iNaturalist no disponible (%1$s): lista de BirdNET</string>
     <string name="analyse_terminee">Análisis del vídeo terminado</string>
     <string name="slogan">el comedero que reconoce a sus visitantes</string>
+    <string name="onglet_galerie">Galería</string>
+    <string name="onglet_stats">Estadíst.</string>
+    <string name="galerie_vide">La mejor foto de cada especie aparecerá aquí.</string>
+    <string name="jours_7">7 días</string>
+    <string name="jours_30">30 días</string>
+    <string name="tout">Todo</string>
+    <string name="stat_visites">visitas</string>
+    <string name="stat_especes">especies</string>
+    <string name="stat_plus_frequente">especie más frecuente</string>
+    <string name="visites_par_espece">Visitas por especie</string>
+    <string name="visites_par_heure">Visitas por hora</string>
+    <string name="visites_par_jour">Visitas por día</string>
+    <string name="aucune_visite_periode">Ninguna visita en este período</string>
+    <string name="menage">Limpieza: clips antiguos borrados: %1$d</string>
+    <string name="menage_titre">Limpieza automática</string>
+    <string name="menage_jours">Borrar clips de más de %1$d días</string>
+    <string name="menage_go">Tamaño máximo de la carpeta: %1$d GB</string>
+    <string name="menage_aide">La galería y el registro nunca se borran. Con menos de 1 GB libre, se borran los clips más antiguos.</string>
+    <string name="tenir_paysage">Coloque el teléfono en horizontal frente al comedero.</string>
+    <string name="son_clips">Grabar el sonido en los clips</string>
 </resources>

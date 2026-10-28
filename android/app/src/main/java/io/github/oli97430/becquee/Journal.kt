@@ -62,6 +62,7 @@ class Journal(private val dossier: File) {
                 source.copyTo(File(cible, p.name), overwrite = true)
             }
         }
+        Rangement.corrigerGalerie(dossier, ligne)
         return true
     }
 

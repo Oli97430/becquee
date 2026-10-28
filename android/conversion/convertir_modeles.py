@@ -8,7 +8,7 @@ Produit dans android/app/src/main/assets/modeles/ :
   - bioclip_textes.bin      vecteurs texte précalculés de toutes les espèces d'oiseaux (float16, N x 512)
   - bioclip_textes.txt      une ligne par vecteur : nom scientifique
   - bioclip_oiseau.bin      vecteurs des phrases « oiseau / pas oiseau » (Reconnaisseur.OISEAU + AUTRES)
-  - yolos_tiny.onnx         détecteur d'objets COCO (classe « bird »), entrée fixe 512 x 672, poids int8
+  - yolos_tiny.onnx         détecteur d'objets COCO (classe « bird »), entrée fixe 384 x 512, poids int8
   - birdnet_data_model.onnx méta-modèle géographique de BirdNET (liste d'espèces hors ligne)
   - BirdNET_GLOBAL_6K_V2.4_Labels*.txt  noms d'espèces traduits
 
@@ -35,7 +35,9 @@ sys.path.insert(0, str(LOGICIEL))
 from mangeoire_cam import MODELE_BIOCLIP, MODELE_DETECTION, NON_OISEAUX, Reconnaisseur  # noqa: E402
 
 AGENT = {"User-Agent": "Becquee/1.0 (conversion Android)"}
-TAILLE_YOLOS = (512, 672)      # hauteur, largeur : ce que donne le processeur YOLOS pour une image 4:3
+# hauteur, largeur. Le processeur YOLOS donnerait 512 x 672 pour une image 4:3 ; en 384 x 512 le détecteur
+# est 2,1 fois plus rapide sur le téléphone, avec les mêmes visites sur les deux vidéos de test
+TAILLE_YOLOS = (384, 512)
 
 
 def quantifier(entree, sortie):

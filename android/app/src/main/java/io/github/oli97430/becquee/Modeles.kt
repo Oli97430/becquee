@@ -18,7 +18,9 @@ object Modeles {
         val dossier = File(context.filesDir, "modeles").apply { mkdirs() }
         val f = File(dossier, nom)
         val taille = context.assets.openFd("modeles/$nom").use { it.length }
-        if (!f.exists() || f.length() != taille) {
+        // recopié après chaque mise à jour de l'appli (un modèle changé peut garder la même taille)
+        val miseAJour = context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
+        if (!f.exists() || f.length() != taille || f.lastModified() < miseAJour) {
             val tmp = File(dossier, "$nom.tmp")
             context.assets.open("modeles/$nom").use { e -> tmp.outputStream().use { e.copyTo(it, 1 shl 20) } }
             tmp.renameTo(f)
@@ -29,10 +31,20 @@ object Modeles {
     fun texte(context: Context, nom: String): String =
         context.assets.open("modeles/$nom").use { it.readBytes().toString(Charsets.UTF_8) }
 
+    /** Accélération des calculs : "cpu" (défaut), "xnnpack" ou "nnapi" (puce IA du téléphone). */
+    @Volatile var acceleration = "cpu"
+    @Volatile var fils = 4
+
     fun session(context: Context, nom: String): OrtSession {
         val options = OrtSession.SessionOptions().apply {
-            setIntraOpNumThreads(Runtime.getRuntime().availableProcessors().coerceIn(1, 4))
+            setIntraOpNumThreads(fils.coerceIn(1, Runtime.getRuntime().availableProcessors()))
             setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+            runCatching {
+                when (acceleration) {
+                    "xnnpack" -> addXnnpack(mapOf("intra_op_num_threads" to fils.toString()))
+                    "nnapi" -> addNnapi()
+                }
+            }.onFailure { android.util.Log.w("Becquee", "accélération $acceleration indisponible", it) }
         }
         return env.createSession(fichier(context, nom).absolutePath, options)
     }

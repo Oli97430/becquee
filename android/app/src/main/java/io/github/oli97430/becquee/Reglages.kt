@@ -22,8 +22,24 @@ class Reglages(context: Context) {
         get() = p.getBoolean("filtre_oiseaux", true)
         set(v) = p.edit().putBoolean("filtre_oiseaux", v).apply()
 
+    var acceleration: String
+        get() = p.getString("acceleration", "cpu") ?: "cpu"
+        set(v) = p.edit().putString("acceleration", v).apply()
+    var fils: Int
+        get() = p.getInt("fils", 4)
+        set(v) = p.edit().putInt("fils", v).apply()
+    var son: Boolean
+        get() = p.getBoolean("son", true)
+        set(v) = p.edit().putBoolean("son", v).apply()
+    var menageJours: Int
+        get() = p.getInt("menage_jours", 60)
+        set(v) = p.edit().putInt("menage_jours", v).apply()
+    var menageGo: Float
+        get() = p.getFloat("menage_go", 10f)
+        set(v) = p.edit().putFloat("menage_go", v).apply()
+
     // le reconnaisseur (et sa liste d'espèces) est gardé tant que la position ne change pas
-    private val position get() = "$latitude,$longitude,${Especes.langue()}"
+    private val position get() = "$latitude,$longitude,${Especes.langue()},$acceleration,$fils"
     fun retenir(r: Reconnaisseur) { cles[r] = position }
     fun memePosition(r: Reconnaisseur) = cles[r] == position
 
