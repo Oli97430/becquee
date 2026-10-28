@@ -36,6 +36,7 @@ object Etat {
     val versionJournal = MutableStateFlow(0)
     @Volatile var surveillance: Surveillance? = null
     @Volatile var reconnaisseur: Reconnaisseur? = null
+    @Volatile var dernierAffichage = 0L
 
     fun message(texte: String) {
         messages.value = (messages.value + texte).takeLast(30)
@@ -53,6 +54,8 @@ class SurveillanceService : LifecycleService() {
         const val CAMERA = "camera"
         const val FICHIER = "fichier"
         const val ARRETER = "arreter"
+        /** Test du mode caméra sans caméra : la vidéo est envoyée au moteur image par image, en temps réel. */
+        const val SIMULATION = "simulation"
 
         fun lancer(context: Context, action: String, video: Uri? = null) {
             val i = Intent(context, SurveillanceService::class.java).setAction(action).setData(video)
@@ -68,7 +71,7 @@ class SurveillanceService : LifecycleService() {
         super.onStartCommand(intent, flags, startId)
         when (intent?.action) {
             ARRETER -> { Etat.surveillance?.arreter(); return START_NOT_STICKY }
-            CAMERA, FICHIER -> if (Etat.marche.value == null) demarrer(intent.action!!, intent.data)
+            CAMERA, FICHIER, SIMULATION -> if (Etat.marche.value == null) demarrer(intent.action!!, intent.data)
         }
         return START_NOT_STICKY
     }
@@ -102,7 +105,11 @@ class SurveillanceService : LifecycleService() {
         Etat.marche.value = action
         val micro = if (avecSon) runCatching { Micro() }.getOrNull() else null
         val source: Source = try {
-            if (action == CAMERA) SourceCamera().also { ouvrirCamera(it) } else SourceFichier(this, video!!)
+            when (action) {
+                CAMERA -> SourceCamera().also { ouvrirCamera(it) }
+                SIMULATION -> SourceCamera().also { simuler(it, SourceFichier(this, video!!)) }
+                else -> SourceFichier(this, video!!)
+            }
         } catch (e: Exception) {
             android.util.Log.e("Becquee", "source", e)
             Etat.message(getString(R.string.source_erreur, e.javaClass.simpleName))
@@ -119,8 +126,11 @@ class SurveillanceService : LifecycleService() {
             seuil = reglages.seuil, surface = reglages.surface, filtreOiseaux = reglages.filtreOiseaux,
             menageJours = reglages.menageJours, menageGo = reglages.menageGo, micro = micro,
             surImage = { t, vue ->
-                // l'écran n'a pas besoin de toutes les images
-                if (Etat.image.value == null || vue.enregistrement || (t.tempsUs / 66_000) % 2 == 0L) Etat.image.value = t.bitmap()
+                // l'écran n'est mis à jour que s'il est affiché, environ 8 fois par seconde
+                if (Etat.image.value == null || (Etat.image.subscriptionCount.value > 0 && (t.tempsUs / 125_000) != (Etat.dernierAffichage / 125_000))) {
+                    Etat.dernierAffichage = t.tempsUs
+                    Etat.image.value = t.bitmap()
+                }
                 Etat.vue.value = vue
             },
             surVisite = { Etat.versionJournal.value++ },
@@ -140,6 +150,24 @@ class SurveillanceService : LifecycleService() {
                 android.os.Handler(mainLooper).post { arreterService() }
             }
         }.apply { name = "surveillance" }.start()
+    }
+
+    /** Pousse les images de la vidéo comme le ferait CameraX : au rythme de la vidéo, la plus ancienne
+     *  abandonnée si le moteur prend du retard, horodatées à l'arrivée. Fin de vidéo = arrêt. */
+    private fun simuler(source: SourceCamera, video: SourceFichier) {
+        Thread {
+            val debut = SystemClock.elapsedRealtime()
+            var n = 0
+            while (source.ouverte) {
+                val t = video.lire() ?: break
+                val attente = debut + (n++ * 1000 / video.fps).toLong() - SystemClock.elapsedRealtime()
+                if (attente > 0) Thread.sleep(attente)
+                source.pousser(Trame(t.pixels, t.largeur, t.hauteur, SystemClock.elapsedRealtimeNanos() / 1000))
+            }
+            video.fermer()
+            Thread.sleep(6000)      // laisser la dernière visite se terminer
+            source.fermer()
+        }.apply { name = "simulation" }.start()
     }
 
     private fun ouvrirCamera(source: SourceCamera) {

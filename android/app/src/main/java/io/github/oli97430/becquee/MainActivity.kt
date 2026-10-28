@@ -70,7 +70,8 @@ class MainActivity : ComponentActivity() {
             // mesures de vitesse : --es acceleration cpu|xnnpack|nnapi --es fils 4
             intent.getStringExtra("acceleration")?.takeIf { it in listOf("cpu", "xnnpack", "nnapi") }?.let { Reglages(this).acceleration = it }
             intent.getStringExtra("fils")?.toIntOrNull()?.takeIf { it in 1..8 }?.let { Reglages(this).fils = it }
-            SurveillanceService.lancer(this, SurveillanceService.FICHIER, Uri.fromFile(video))
+            val mode = if (intent.getStringExtra("direct") == "1") SurveillanceService.SIMULATION else SurveillanceService.FICHIER
+            SurveillanceService.lancer(this, mode, Uri.fromFile(video))
         }
         setContent {
             MaterialTheme(colorScheme = Couleurs.theme) { Ecran() }

@@ -206,9 +206,11 @@ class Surveillance(
             val d = System.nanoTime()
             oiseaux = detecteurOiseaux.detecter(t)
             dureeDetecteur += System.nanoTime() - d
-            if (oiseaux.isEmpty() && boite != null) {
+            if (oiseaux.isEmpty() && boite != null && boite.l * boite.h <= 0.5f * t.largeur * t.hauteur) {
                 // le détecteur rate certains oiseaux (pose, contre-jour...) : BioCLIP juge la zone en
-                // mouvement ; il faut deux avis sûrs pour valider une visite
+                // mouvement ; il faut deux avis sûrs pour valider une visite. Une zone plus grande que la
+                // moitié de l'image (changement de lumière, écran qui défile, téléphone bougé) n'est pas un
+                // oiseau posé : BioCLIP s'y trompait sur une page de texte
                 val p = reconnaisseur.probOiseau(t, Images.recadrer(t.largeur, t.hauteur, boite, 0.2f))
                 if (p >= seuilOiseauBioclip) { oiseaux = listOf(p to boite); confirmation = 0.5f }
             }
@@ -228,7 +230,9 @@ class Surveillance(
         message(context.getString(R.string.chargement_modeles))
         reconnaisseur.charger()
         detecteurOiseaux.charger()
-        val detecteur = DetecteurMouvement(surface)
+        // caméra : mouvement cherché sur une image de 320 pixels (au lieu de 480 pour un fichier, comme sur
+        // le PC) pour laisser le processeur aux réseaux de neurones qui tournent en même temps
+        val detecteur = DetecteurMouvement(surface, if (source.fichier) 480 else 320)
         val tampon = ArrayDeque<Image420>()
         var visite: Visite? = null
         var dernierMouvement = 0.0
