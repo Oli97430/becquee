@@ -10,7 +10,7 @@
   #define Source "C:\Becquee_build\app"
 #endif
 #define Nom "Becquée"
-#define Version "1.2"
+#define Version "1.2.1"
 
 [Setup]
 AppId={{6F2B1C7E-3D4A-4E59-9B8C-BECQUEE00001}
