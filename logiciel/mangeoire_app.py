@@ -529,7 +529,7 @@ class App:
             "Smartphone : appli « IP Webcam » (Android), adresse du type http://192.168.1.20:8080/video.\n"
             "Caméra sur Internet (nid, mangeoire) : collez l'adresse de la page YouTube ou du flux,\n"
             "et réglez la position sur le lieu de la caméra. Le micro du PC n'est pas utilisé pour ses visites.\n"
-            "L'écoute utilise le micro du PC (ou de la webcam USB).")).grid(
+            "L'écoute utilise le micro du PC (ou de la webcam USB) ; avec une caméra IP (rtsp://), le micro de la caméra.")).grid(
             row=next(lig), column=0, columnspan=3, sticky="w", pady=(12, 0))
 
         def nombre(var, defaut):
@@ -617,6 +617,7 @@ class App:
         self.dossier.mkdir(parents=True, exist_ok=True)
         self.ecoute = Ecoute(MODELES, self.dossier, seuil=self.cfg["seuil_chant"],
                              latitude=self.cfg["latitude"], longitude=self.cfg["longitude"], micro=self.cfg["micro"],
+                             flux=self.surveillance.source if self.surveillance else None,   # caméra IP : son de la caméra
                              sur_chant=lambda e, c: self.messages.put(("chant", (e, c, datetime.now()))),
                              sur_message=lambda m: self.messages.put(("message", m)))
         self.ecoute.demarrer()
@@ -718,7 +719,9 @@ class App:
             if not hasattr(self.ecoute, "_debut"):
                 self.ecoute._debut = time.time()
             elif time.time() - self.ecoute._debut > 15 and self.ecoute.niveau < 2e-4:
-                self.lbl_etat.configure(text=_("Micro muet : vérifiez Paramètres › Son › Entrée"), foreground=AMBRE)
+                texte = (_("Micro de la caméra coupé : activez-le dans l'appli de la caméra")
+                         if self.ecoute.source_son == "camera" else _("Micro muet : vérifiez Paramètres › Son › Entrée"))
+                self.lbl_etat.configure(text=texte, foreground=AMBRE)
             else:
                 self.lbl_etat.configure(foreground=DISCRET)
 

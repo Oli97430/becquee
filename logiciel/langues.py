@@ -146,6 +146,28 @@ TEXTES = {
     "Écoute des chants": {"en": "Listen to songs", "es": "Escuchar cantos", "de": "Gesänge hören", "pt": "Ouvir cantos",
                           "it": "Ascolto dei canti"},
     "Prêt": {"en": "Ready", "es": "Listo", "de": "Bereit", "pt": "Pronto", "it": "Pronto"},
+    "Micro de la caméra coupé : activez-le dans l'appli de la caméra": {
+        "en": "Camera microphone off: turn it on in the camera's app",
+        "es": "Micrófono de la cámara apagado: actívelo en la app de la cámara",
+        "de": "Kameramikrofon aus: in der App der Kamera einschalten",
+        "pt": "Microfone da câmera desligado: ative-o no app da câmera",
+        "it": "Microfono della videocamera spento: attivalo nell'app della videocamera"},
+    "Écoute des chants : son de la caméra ({freq} Hz)": {
+        "en": "Song listening: camera sound ({freq} Hz)", "es": "Escucha de cantos: sonido de la cámara ({freq} Hz)",
+        "de": "Gesangserkennung: Ton der Kamera ({freq} Hz)", "pt": "Escuta de cantos: som da câmera ({freq} Hz)",
+        "it": "Ascolto dei canti: audio della videocamera ({freq} Hz)"},
+    "Son en {freq} Hz : chants appris désactivés, BirdNET seul": {
+        "en": "Sound at {freq} Hz: learned songs disabled, BirdNET only",
+        "es": "Sonido a {freq} Hz: cantos aprendidos desactivados, solo BirdNET",
+        "de": "Ton mit {freq} Hz: gelernte Gesänge deaktiviert, nur BirdNET",
+        "pt": "Som a {freq} Hz: cantos aprendidos desativados, apenas BirdNET",
+        "it": "Audio a {freq} Hz: canti appresi disattivati, solo BirdNET"},
+    "La caméra n'envoie pas de son : écoute sur le micro du PC": {
+        "en": "The camera sends no sound: listening with the PC microphone",
+        "es": "La cámara no envía sonido: escucha con el micrófono del PC",
+        "de": "Die Kamera sendet keinen Ton: Hören über das PC-Mikrofon",
+        "pt": "A câmera não envia som: escuta pelo microfone do PC",
+        "it": "La videocamera non invia audio: ascolto con il microfono del PC"},
     "Micro muet : vérifiez Paramètres › Son › Entrée": {
         "en": "Microphone silent: check Settings › Sound › Input",
         "es": "Micrófono mudo: revise Configuración › Sonido › Entrada",
@@ -260,27 +282,27 @@ TEXTES = {
     "Smartphone : appli « IP Webcam » (Android), adresse du type http://192.168.1.20:8080/video.\n"
     "Caméra sur Internet (nid, mangeoire) : collez l'adresse de la page YouTube ou du flux,\n"
     "et réglez la position sur le lieu de la caméra. Le micro du PC n'est pas utilisé pour ses visites.\n"
-    "L'écoute utilise le micro du PC (ou de la webcam USB).": {
+    "L'écoute utilise le micro du PC (ou de la webcam USB) ; avec une caméra IP (rtsp://), le micro de la caméra.": {
         "en": "Smartphone: “IP Webcam” app (Android), address like http://192.168.1.20:8080/video.\n"
               "Camera on the Internet (nest, feeder): paste the address of the YouTube page or of the stream,\n"
               "and set the position to the camera's location. The PC microphone is not used for its visits.\n"
-              "Listening uses the PC microphone (or the USB webcam's).",
+              "Listening uses the PC microphone (or the USB webcam's); with an IP camera (rtsp://), the camera's microphone.",
         "es": "Smartphone: app «IP Webcam» (Android), dirección del tipo http://192.168.1.20:8080/video.\n"
               "Cámara en Internet (nido, comedero): pegue la dirección de la página de YouTube o del flujo,\n"
               "y ajuste la posición al lugar de la cámara. El micrófono del PC no se usa para sus visitas.\n"
-              "La escucha usa el micrófono del PC (o de la webcam USB).",
+              "La escucha usa el micrófono del PC (o de la webcam USB); con una cámara IP (rtsp://), el micrófono de la cámara.",
         "de": "Smartphone: App „IP Webcam“ (Android), Adresse wie http://192.168.1.20:8080/video.\n"
               "Kamera im Internet (Nest, Futterhaus): Adresse der YouTube-Seite oder des Streams einfügen\n"
               "und den Standort auf den Ort der Kamera setzen. Das PC-Mikrofon wird für ihre Besuche nicht verwendet.\n"
-              "Zum Hören wird das Mikrofon des PCs (oder der USB-Webcam) verwendet.",
+              "Zum Hören wird das Mikrofon des PCs (oder der USB-Webcam) verwendet, bei einer IP-Kamera (rtsp://) das Mikrofon der Kamera.",
         "pt": "Smartphone: app “IP Webcam” (Android), endereço do tipo http://192.168.1.20:8080/video.\n"
               "Câmera na Internet (ninho, comedouro): cole o endereço da página do YouTube ou do fluxo,\n"
               "e ajuste a posição para o local da câmera. O microfone do PC não é usado para as suas visitas.\n"
-              "A escuta usa o microfone do PC (ou da webcam USB).",
+              "A escuta usa o microfone do PC (ou da webcam USB); com uma câmera IP (rtsp://), o microfone da câmera.",
         "it": "Smartphone: app «IP Webcam» (Android), indirizzo come http://192.168.1.20:8080/video.\n"
               "Videocamera su Internet (nido, mangiatoia): incolli l'indirizzo della pagina YouTube o del flusso,\n"
               "e imposti la posizione sul luogo della videocamera. Il microfono del PC non è usato per le sue visite.\n"
-              "L'ascolto usa il microfono del PC (o della webcam USB)."},
+              "L'ascolto usa il microfono del PC (o della webcam USB); con una videocamera IP (rtsp://), il microfono della videocamera."},
     "Enregistrer": {"en": "Save", "es": "Guardar", "de": "Speichern", "pt": "Salvar", "it": "Salva"},
     "Espèces locales absentes de BirdNET (endémiques…) : Becquée apprend leurs chants (iNaturalist, xeno-canto, "
     "sons gardés lors des visites reconnues à l'image).": {

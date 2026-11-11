@@ -722,8 +722,48 @@ def recadrer(image, boite, marge=0.15):
 # ------------------------------------------------------------------
 #  Chants : BirdNET en continu sur le micro
 # ------------------------------------------------------------------
+class SonDuFlux:
+    """Piste son d'une caméra IP (RTSP), décodée par PyAV dans un fil à part : une seconde connexion
+    à la caméra, à côté de celle d'OpenCV pour l'image. S'utilise comme sounddevice.InputStream
+    (« with ») ; rappel(bloc) reçoit du float32 mono à la fréquence de la caméra. Reconnexion
+    automatique si le flux tombe."""
+
+    def __init__(self, url, freq, rappel, arret):
+        self.url, self.freq, self.rappel, self.arret = url, freq, rappel, arret
+        self.fin = threading.Event()
+        self.fil = threading.Thread(target=self._boucle, daemon=True)
+
+    def __enter__(self):
+        self.fil.start()
+        return self
+
+    def __exit__(self, *erreur):
+        self.fin.set()
+        self.fil.join(timeout=3)
+
+    def _boucle(self):
+        import av
+        while not (self.fin.is_set() or self.arret.is_set()):
+            conteneur = None
+            try:
+                conteneur = av.open(self.url, options={"rtsp_transport": "tcp"}, timeout=10)
+                piste = conteneur.streams.audio[0]
+                conversion = av.AudioResampler(format="flt", layout="mono", rate=self.freq)
+                for paquet in conteneur.demux(piste):
+                    if self.fin.is_set() or self.arret.is_set():
+                        break
+                    for trame in paquet.decode():
+                        for t in conversion.resample(trame):
+                            self.rappel(t.to_ndarray().reshape(-1).astype(np.float32))
+            except Exception:
+                self.fin.wait(2)        # caméra injoignable un moment : on réessaie
+            finally:
+                if conteneur is not None:
+                    conteneur.close()
+
+
 class Ecoute:
-    """Écoute le micro et reconnaît les chants (BirdNET v2.4, fenêtres de 3 s).
+    """Écoute le micro (ou le son de la caméra IP) et reconnaît les chants (BirdNET v2.4, fenêtres de 3 s).
 
     Les détections sont gardées en mémoire (pour les associer aux visites),
     notées dans chants.csv (une ligne par espèce et par minute au plus) et
@@ -733,10 +773,17 @@ class Ecoute:
     FENETRE = 3.0
 
     def __init__(self, dossier_modeles, dossier_journal, seuil=0.6, latitude=None, longitude=None,
-                 micro=None, sur_chant=None, sur_message=None):
+                 micro=None, sur_chant=None, sur_message=None, flux=None):
         self.dossier_modeles = Path(dossier_modeles)
         self.dossier_journal = Path(dossier_journal)
         self.seuil, self.latitude, self.longitude, self.micro = seuil, latitude, longitude, micro
+        self.flux = flux if isinstance(flux, str) and flux.lower().startswith("rtsp") else None   # son de la caméra IP
+        if self.flux and self.flux.endswith("/stream1"):
+            # Tapo, Mercusys : même son sur stream2, avec une image légère ; sur stream1, le Wi-Fi déjà chargé
+            # par l'image pleine définition ne laissait passer que 35 à 85 % du son
+            self.flux = self.flux[:-len("stream1")] + "stream2"
+        self.source_son = "micro"                # « micro » ou « camera » : d'où vient le son écouté
+        self.freq_son = None                     # fréquence d'origine du son (8000 pour une caméra IP)
         self.sur_chant = sur_chant or (lambda e, c: None)
         self.sur_message = sur_message or print
         self.historique = deque(maxlen=2000)     # (horodatage, espece, confiance)
@@ -845,28 +892,64 @@ class Ecoute:
     def arreter(self):
         self.arret.set()
 
+    def _ouvrir_micro(self, rappel):
+        """Micro du PC : (fréquence, capture à ouvrir avec « with »)."""
+        import sounddevice as sd
+        # capture à la fréquence native du micro (beaucoup de micros intégrés ne
+        # renvoient que des zéros à 48 kHz), puis conversion en 48 kHz pour BirdNET
+        appareil = self.micro if self.micro is not None else sd.default.device[0]
+        freq = int(sd.query_devices(appareil, "input")["default_samplerate"])
+        capture = sd.InputStream(samplerate=freq, channels=1, dtype="float32", device=self.micro,
+                                 blocksize=int(freq * 0.25), callback=lambda indata, n, t, s: rappel(indata[:, 0].copy()))
+        self.source_son = "micro"
+        self.sur_message(_("Écoute des chants : micro actif ({freq} Hz)", freq=freq))
+        return freq, capture
+
+    def _ouvrir_flux(self, rappel):
+        """Piste son de la caméra IP (RTSP), ou None si la caméra n'envoie pas de son."""
+        import av
+        conteneur = av.open(self.flux, options={"rtsp_transport": "tcp"}, timeout=10)
+        try:
+            if not conteneur.streams.audio:
+                return None
+            freq = conteneur.streams.audio[0].codec_context.sample_rate
+        finally:
+            conteneur.close()
+        self.source_son = "camera"
+        self.sur_message(_("Écoute des chants : son de la caméra ({freq} Hz)", freq=freq))
+        return freq, SonDuFlux(self.flux, freq, rappel, self.arret)
+
     def _executer(self):
         try:
-            import sounddevice as sd
             if self.session is None:
                 self.charger()
             assurer_journal(self.dossier_journal / "chants.csv", COLONNES_CHANTS)
-            # capture à la fréquence native du micro (beaucoup de micros intégrés ne
-            # renvoient que des zéros à 48 kHz), puis conversion en 48 kHz pour BirdNET
-            appareil = self.micro if self.micro is not None else sd.default.device[0]
-            freq = int(sd.query_devices(appareil, "input")["default_samplerate"])
-            tampon = deque(maxlen=int(freq * self.FENETRE))
             file = deque()
             verrou = threading.Lock()
+
+            def rappel(bloc):
+                with verrou:
+                    file.append(bloc)
+
+            ouverture = None
+            if self.flux:
+                try:
+                    ouverture = self._ouvrir_flux(rappel)
+                except Exception:
+                    pass
+                if ouverture is None:
+                    self.sur_message(_("La caméra n'envoie pas de son : écoute sur le micro du PC"))
+            freq, capture = ouverture or self._ouvrir_micro(rappel)
+            self.freq_son = freq
+            if freq < 16000 and self.complement is not None:
+                # son « téléphone » (caméra IP, 8 kHz) : les chants appris en pleine qualité s'y trompent
+                # (Tarier de La Réunion à 100 % sur des chants d'autres espèces) ; BirdNET seul reste fiable
+                self.complement = None
+                self.sur_message(_("Son en {freq} Hz : chants appris désactivés, BirdNET seul", freq=freq))
+            tampon = deque(maxlen=int(freq * self.FENETRE))
             cible = int(self.FREQ * self.FENETRE)
 
-            def rappel(indata, frames, t, status):
-                with verrou:
-                    file.append(indata[:, 0].copy())
-
-            with sd.InputStream(samplerate=freq, channels=1, dtype="float32", device=self.micro,
-                                blocksize=int(freq * 0.25), callback=rappel):
-                self.sur_message(_("Écoute des chants : micro actif ({freq} Hz)", freq=freq))
+            with capture:
                 prochaine = time.time() + self.FENETRE
                 seconde = []
                 while not self.arret.is_set():
@@ -889,7 +972,8 @@ class Ecoute:
                         if freq != self.FREQ:
                             signal = np.interp(np.linspace(0, len(signal) - 1, cible),
                                                np.arange(len(signal)), signal).astype(np.float32)
-                        self.niveau = float(np.sqrt(np.mean(signal ** 2)))
+                        # écart-type plutôt que RMS : le silence d'une caméra (G.711) est une valeur constante non nulle
+                        self.niveau = float(np.std(signal))
                         for espece, sci, conf in self.analyser(signal)[:3]:
                             self._noter(espece, sci, conf)
         except Exception as e:
@@ -1042,6 +1126,8 @@ class Surveillance:
         gardé dans chants_perso/<espèce>/ ; « Compléter les chants » apprendra ensuite son chant."""
         e = self.ecoute
         if e is None or not getattr(e, "scientifiques", None):
+            return
+        if (getattr(e, "freq_son", None) or Ecoute.FREQ) < 16000:      # son de caméra 8 kHz : n'apprend rien de bon
             return
         sci = next((x["sci"] for x in getattr(self.reconnaisseur, "especes", []) if x["nom"] == espece), None)
         if sci is None or sci in e.scientifiques:
