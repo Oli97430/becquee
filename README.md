@@ -133,6 +133,8 @@ Au premier lancement, les modèles (~800 Mo) sont téléchargés depuis Hugging 
 1. **Premier lancement** : la fenêtre *Réglages* s'ouvre. Tapez votre ville dans *Position de la mangeoire* et cliquez sur **Chercher**, puis **Enregistrer**. Becquée télécharge la liste des oiseaux de votre région.
 2. **Caméra** :
    - **Webcam USB** : la poser objectif contre la vitre, choisir « Webcam 0 » ;
+   - **Caméra Wi-Fi Mercusys, Tapo** (ou toute caméra RTSP) : **📷 Caméra IP** → *Chercher sur le Wi-Fi* → identifiant et mot de passe du **compte de la caméra** → *Tester* → *Utiliser cette caméra*. Ce compte se crée d'abord dans l'appli du fabricant (Paramètres de l'appareil → Paramètres avancés → Compte de la caméra) ; ce n'est pas votre compte Mercusys. Le mot de passe ne s'affiche jamais ;
+   - **EZVIZ ou autre lecteur ouvert sur le PC** (EZVIZ Studio…) : **🪟 Fenêtre** → choisir la fenêtre. Elle peut être cachée par d'autres, pas réduite ; Becquée y trouve seul la vidéo. **⛶ Cadrer** garde une seule caméra d'une mosaïque ;
    - **Smartphone Android** : appli *IP Webcam* → « Démarrer le serveur », puis saisir l'adresse affichée dans le champ Caméra, par ex. `http://192.168.1.20:8080/video` (téléphone sur secteur) ;
    - **Caméra sur Internet** (nid, mangeoire filmés en direct) : coller l'adresse de la page YouTube (ou Twitch…, lue par [yt-dlp](https://github.com/yt-dlp/yt-dlp)) ou d'un flux `.m3u8`, et régler la *Position* sur le lieu de la caméra. Le micro du PC n'est pas utilisé pour ces visites.
 3. **Démarrer** : la vidéo s'affiche ; cadre vert = mouvement, cadre ambré = oiseau détecté, « REC » pendant une visite, espèce en surimpression.
@@ -194,7 +196,7 @@ python logiciel/mangeoire_cam.py --source enregistrement.mp4 --dossier sortie --
 python logiciel/chants_complement.py --position -21.1 55.5 --cle-xeno-canto VOTRE_CLE
 ```
 
-`--source` : index de webcam, URL du flux du smartphone, flux RTSP, page d'une caméra en direct (YouTube…) ou fichier vidéo. `--help` pour toutes les options (sensibilité, seuil, durée des clips, ménage…).
+`--source` : index de webcam, URL du flux du smartphone, caméra Wi-Fi (`rtsp://compte:motdepasse@IP:554/stream1`), fenêtre ouverte (`"fenetre:EZVIZ Studio"`), page d'une caméra en direct (YouTube…) ou fichier vidéo. `--help` pour toutes les options (sensibilité, seuil, durée des clips, ménage…).
 
 ---
 
@@ -205,6 +207,8 @@ becquee/
 ├── logiciel/
 │   ├── mangeoire_app.py        interface Tkinter
 │   ├── mangeoire_cam.py        moteur : caméra, détection, reconnaissance, chants, journal
+│   ├── cameras.py              caméras Wi-Fi : recherche sur le réseau, test du compte (repris de Broutille)
+│   ├── fenetres.py             fenêtre ouverte filmée (EZVIZ Studio…), vidéo trouvée seule
 │   ├── chants_complement.py    apprentissage des chants absents de BirdNET
 │   ├── langues.py              traductions (6 langues)
 │   ├── creer_logo.py           génère le logo et l'icône

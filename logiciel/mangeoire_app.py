@@ -22,11 +22,13 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 import cv2
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 
+import cameras
+import fenetres
 import langues
 from langues import LANGUES, _
 from mangeoire_cam import (PAS_UN_OISEAU, DetecteurOiseaux, Ecoute, Reconnaisseur, Surveillance,
                            chercher_lieu, cle_espece, construire_galerie, corriger_visite, lire_galerie,
-                           lire_journal)
+                           lire_journal, masquer, ouvrir_source, source_depuis_texte)
 
 ICI = Path(__file__).resolve().parent
 MODELES = ICI / "modeles"
@@ -53,6 +55,8 @@ DEFAUTS = {
     "menage_go": 20,
     "demarrage_auto": False,
     "sources_recentes": [],
+    "camera_ip": "",            # caméra Wi-Fi choisie dans 📷 Caméra IP (adresse rtsp:// avec son compte)
+    "zones": {},                # source (sans mot de passe) -> partie de l'image gardée (x0, y0, x1, y1 en fractions)
 }
 
 # Thème
@@ -77,7 +81,43 @@ def surface_depuis_sensibilite(s):
 
 
 def libelle_source(source):
-    return f"Webcam {source}" if str(source).isdigit() else str(source)
+    """Texte de la liste « Caméra » : jamais le mot de passe d'une caméra à l'écran."""
+    source = str(source)
+    if source.isdigit():
+        return f"Webcam {source}"
+    camera = cameras.lire_adresse(source)
+    if camera:
+        return _("Caméra IP : {adresse}", adresse=camera[0]) + (f" ({camera[3].split('?')[0]})" if camera[3] else "")
+    if fenetres.est_fenetre(source):
+        return _("Fenêtre : {titre}", titre=source[len(fenetres.PREFIXE_FENETRE):])
+    return masquer(source)
+
+
+def cle_source(source):
+    """Clé d'une source dans les réglages (cadrage) : sans son mot de passe, qui peut changer."""
+    source = str(source)
+    camera = cameras.lire_adresse(source)
+    if camera:
+        return f"rtsp://{camera[0]}:{camera[4]}/{camera[3]}"
+    return masquer(source)
+
+
+def source_depuis_saisie(saisie, *connues):
+    """Texte de la liste « Caméra » -> source. connues : sources enregistrées ; leur libellé
+    (mot de passe caché) renvoie à elles."""
+    saisie = saisie.strip()
+    for connue in connues:
+        if connue and saisie == libelle_source(connue):
+            return str(connue)
+    avant = _("Caméra IP : {adresse}", adresse="\0").partition("\0")[0].rstrip()
+    if saisie.startswith(avant):        # libellé retouché à la main : la caméra enregistrée, pas du texte
+        return next((str(c) for c in connues if c and cameras.lire_adresse(c)), saisie)
+    if saisie.startswith("Webcam ") and saisie[7:].strip().isdigit():
+        return saisie[7:].strip()
+    avant, _s, apres = _("Fenêtre : {titre}", titre="\0").partition("\0")
+    if saisie.startswith(avant) and saisie.endswith(apres) and len(saisie) > len(avant) + len(apres):
+        return fenetres.PREFIXE_FENETRE + saisie[len(avant):len(saisie) - len(apres)]
+    return saisie
 
 
 def affichage(espece):
@@ -235,9 +275,12 @@ class App:
         barre.grid(row=1, column=0, sticky="ew", padx=20, pady=(4, 10))
         tk.Label(barre, text=_("Caméra"), bg=FOND, fg=DISCRET, font=("Segoe UI", 10)).pack(side="left")
         self.var_source = tk.StringVar(value=libelle_source(self.cfg["source"]))
-        valeurs = [f"Webcam {i}" for i in range(3)] + self.cfg["sources_recentes"]
-        self.cb_source = ttk.Combobox(barre, textvariable=self.var_source, values=valeurs, width=38)
-        self.cb_source.pack(side="left", padx=(8, 12))
+        self.cb_source = ttk.Combobox(barre, textvariable=self.var_source, width=34)
+        self.cb_source.pack(side="left", padx=(8, 6))
+        self._valeurs_sources()
+        ttk.Button(barre, text="📷  " + _("Caméra IP"), command=self.camera_ip).pack(side="left", padx=(0, 4))
+        ttk.Button(barre, text="🪟  " + _("Fenêtre"), command=self.choisir_fenetre).pack(side="left", padx=(0, 4))
+        ttk.Button(barre, text="⛶  " + _("Cadrer"), command=self.cadrer).pack(side="left", padx=(0, 12))
         self.btn_demarrer = ttk.Button(barre, text=_("▶  Démarrer"), style="Vert.TButton", command=self.basculer)
         self.btn_demarrer.pack(side="left")
         ttk.Button(barre, text=_("📷  Photo"), command=self.photo).pack(side="left", padx=(8, 0))
@@ -607,14 +650,13 @@ class App:
         self.arreter() if self.surveillance else self.demarrer()
 
     def demarrer(self):
-        texte = self.var_source.get().strip()
-        source = texte.split()[-1] if texte.startswith("Webcam ") else texte
+        source = self._saisie_source()
         if not source:
             return
         self.cfg["source"] = source
         if not source.isdigit() and source not in self.cfg["sources_recentes"]:
             self.cfg["sources_recentes"] = ([source] + self.cfg["sources_recentes"])[:5]
-            self.cb_source.configure(values=[f"Webcam {i}" for i in range(3)] + self.cfg["sources_recentes"])
+            self._valeurs_sources()
         self._ecrire_config()
         self.surveillance = Surveillance(
             source, self.dossier, seuil=self.cfg["seuil"],
@@ -622,7 +664,7 @@ class App:
             reconnaissance=self.cfg["reconnaissance"], reconnaisseur=self.reconnaisseur, temps_reel=True,
             filtre_oiseaux=self.cfg["filtre_oiseaux"], garder_sans_oiseau=self.cfg["garder_sans_oiseau"],
             detecteur_oiseaux=self.detecteur, menage_jours=self.cfg["menage_jours"], menage_go=self.cfg["menage_go"],
-            sur_image=self._sur_image,
+            zone=self.cfg["zones"].get(cle_source(source)), sur_image=self._sur_image,
             sur_visite=lambda l: self.messages.put(("visite", l)),
             sur_message=lambda m: self.messages.put(("message", m)))
         self._demarrer_ecoute()
@@ -655,6 +697,8 @@ class App:
                 self._ajouter_visite(contenu, en_tete=True)
                 self._afficher_visite(contenu)
                 self._maj_stats()
+            elif genre == "cadrage":
+                self._fenetre_cadrage(*contenu)
             elif genre == "chant":
                 espece, conf, instant = contenu
                 self.dernier_chant = (espece, conf, time.time())
@@ -905,6 +949,303 @@ class App:
     def ouvrir_dossier(self):
         self.dossier.mkdir(parents=True, exist_ok=True)
         os.startfile(self.dossier)
+
+    # -------------------------------------------------------------- caméras (repris de Broutille)
+    def _valeurs_sources(self):
+        connues = [self.cfg["camera_ip"]] + self.cfg["sources_recentes"]
+        libelles = [libelle_source(s) for s in dict.fromkeys(s for s in connues if s)]
+        self.cb_source.configure(values=libelles + [f"Webcam {i}" for i in range(3)])
+
+    def _saisie_source(self):
+        return source_depuis_saisie(self.var_source.get(), self.cfg["source"], self.cfg["camera_ip"],
+                                    *self.cfg["sources_recentes"])
+
+    def camera_ip(self):
+        """Caméra Mercusys, Tapo ou autre RTSP : cherchée sur le Wi-Fi, testée, puis utilisée directement,
+        sans application à laisser ouverte."""
+        f = tk.Toplevel(self.root, bg=CARTE, padx=20, pady=16)
+        f.title(_("Caméra IP (Mercusys, Tapo…)"))
+        f.transient(self.root)
+        actuelle = cameras.lire_adresse(self.cfg["camera_ip"] or self.cfg["source"]) or ("", "", "", "stream1", 554)
+        standard = actuelle[3] in ("", "stream1", "stream2") and actuelle[4] == cameras.PORT_RTSP
+        # libellé traduit -> marque (clé de cameras.MARQUES) ; seule « Autre caméra RTSP » se traduit
+        marques = {(_("Autre caméra RTSP") if m == "Autre caméra RTSP" else m): m for m in cameras.MARQUES}
+        v_marque = tk.StringVar(value=next(iter(cameras.MARQUES)) if standard else _("Autre caméra RTSP"))
+        v_port = tk.StringVar(value=str(actuelle[4]))
+        v_ip, v_id, v_mdp = tk.StringVar(value=actuelle[0]), tk.StringVar(value=actuelle[1]), tk.StringVar(value=actuelle[2])
+        v_qualite = tk.StringVar(value=_("Légère (stream2)") if actuelle[3] == "stream2" else _("Haute qualité (stream1)"))
+        v_chemin = tk.StringVar(value=actuelle[3] or "stream1")
+        ttk.Label(f, style="Discret.TLabel", justify="left", wraplength=560, text=_(
+            "Dans l'appli Mercusys, créez d'abord le « compte de la caméra » (différent de votre compte Mercusys) :\n"
+            "Accueil → carte de la caméra → Paramètres de l'appareil → Paramètres avancés → Compte de la caméra.\n"
+            "Pour que l'adresse ne change pas, réservez-la dans votre box (bail DHCP fixe).")).grid(
+            row=0, column=0, columnspan=3, sticky="w", pady=(0, 12))
+
+        def ligne(rang, texte, widget, apres=None):
+            ttk.Label(f, text=texte, style="Carte.TLabel").grid(row=rang, column=0, sticky="w", pady=5, padx=(0, 14))
+            widget.grid(row=rang, column=1, sticky="w")
+            if apres is not None:
+                apres.grid(row=rang, column=2, sticky="w", padx=(8, 0))
+
+        ligne(1, _("Marque"), ttk.Combobox(f, textvariable=v_marque, values=list(marques), state="readonly", width=28))
+        trouvees = ttk.Combobox(f, textvariable=v_ip, width=28)
+        btn_chercher = ttk.Button(f, text="🔎  " + _("Chercher sur le Wi-Fi"))
+        ligne(2, _("Adresse IP de la caméra"), trouvees, btn_chercher)
+        ligne(3, _("Identifiant (compte de la caméra)"), ttk.Entry(f, textvariable=v_id, width=30))
+        ligne(4, _("Mot de passe"), ttk.Entry(f, textvariable=v_mdp, width=30, show="•"))
+        ligne(5, _("Image"), ttk.Combobox(f, textvariable=v_qualite, state="readonly", width=28,
+                                          values=(_("Haute qualité (stream1)"), _("Légère (stream2)"))))
+        lbl_chemin = ttk.Label(f, text=_("Chemin du flux et port"), style="Carte.TLabel")
+        cadre_chemin = tk.Frame(f, bg=CARTE)
+        ttk.Entry(cadre_chemin, textvariable=v_chemin, width=30).pack(side="left")
+        ttk.Label(cadre_chemin, text="  port", style="Carte.TLabel").pack(side="left")
+        ttk.Entry(cadre_chemin, textvariable=v_port, width=6).pack(side="left", padx=(4, 0))
+        apercu = tk.Label(f, bg=FOND, width=60, height=12, text=_("Aperçu après « Tester »"), fg=DISCRET)
+        apercu.grid(row=7, column=0, columnspan=3, pady=(12, 8))
+        statut = ttk.Label(f, style="Discret.TLabel", wraplength=560)
+        statut.grid(row=8, column=0, columnspan=3, sticky="w")
+
+        def maj_marque(*_args):
+            autre = not cameras.MARQUES[marques.get(v_marque.get(), v_marque.get())][0]
+            for w in (lbl_chemin, cadre_chemin):
+                w.grid_remove()
+            if autre:
+                lbl_chemin.grid(row=6, column=0, sticky="w", pady=5)
+                cadre_chemin.grid(row=6, column=1, sticky="w")
+        v_marque.trace_add("write", maj_marque)
+        maj_marque()
+
+        def url():
+            flux = cameras.MARQUES[marques.get(v_marque.get(), v_marque.get())]
+            if flux[0]:
+                return cameras.adresse(v_ip.get(), v_id.get().strip(), v_mdp.get(),
+                                       flux[1] if "stream2" in v_qualite.get() else flux[0])
+            try:
+                port = int(v_port.get())
+            except ValueError:
+                raise ValueError(_("port illisible")) from None
+            return cameras.adresse(v_ip.get(), v_id.get().strip(), v_mdp.get(), v_chemin.get(), port)
+
+        arret = threading.Event()               # fenêtre fermée : la recherche s'arrête
+        f.bind("<Destroy>", lambda e: arret.set() if e.widget is f else None)
+
+        def attendre(resultat, suite):
+            """Rappelle suite(resultat[0]) dans le fil de l'interface quand le travail en fond a fini."""
+            if not f.winfo_exists():
+                return
+            if not resultat:
+                f.after(300, lambda: attendre(resultat, suite))
+            else:
+                suite(resultat[0])
+
+        def chercher():
+            btn_chercher.configure(state="disabled")
+            statut.configure(text=_("Recherche des caméras sur le réseau (une dizaine de secondes)…"))
+            resultat = []
+
+            def travail():
+                try:
+                    liste = cameras.chercher(arret=arret)
+                    resultat.append((liste, cameras.appareils_tp_link({ip for ip, _o in liste})))
+                except Exception:               # carte réseau étrange : la fenêtre ne reste pas bloquée
+                    resultat.append(([], []))
+            threading.Thread(target=travail, daemon=True).start()
+
+            def fin(r):
+                btn_chercher.configure(state="normal")
+                liste, fermees = r
+                trouvees.configure(values=[ip for ip, _o in liste] + fermees)
+                if fermees and not liste:
+                    statut.configure(text=_("Aucune caméra au flux ouvert. Appareil(s) TP-Link sans flux vidéo : "
+                                            "{adresses} (la caméra si son « compte de la caméra » n'est pas créé, "
+                                            "ou une prise, un répéteur…). Vérifiez l'adresse dans l'appli : Paramètres de "
+                                            "l'appareil → Infos de l'appareil.", adresses=", ".join(fermees)))
+                elif liste:
+                    v_ip.set(liste[0][0])
+                    tp = [ip for ip, o in liste if o]
+                    statut.configure(text=_("Caméras trouvées : {n}", n=len(liste)) +
+                                     (_(" ; Mercusys ou Tapo probable : {adresses}", adresses=", ".join(tp)) if tp else ""))
+                else:
+                    statut.configure(text=_("Aucune caméra trouvée : vérifiez qu'elle est sur le même Wi-Fi, ou lisez son "
+                                            "adresse IP dans l'appli (Paramètres de l'appareil → Infos de l'appareil)."))
+            attendre(resultat, fin)
+
+        def tester():
+            try:
+                adresse = url()
+            except ValueError as e:
+                statut.configure(text=_("Impossible : {erreur}", erreur=e))
+                return
+            if self.surveillance:
+                statut.configure(text=_("Arrêtez d'abord la surveillance : la caméra n'accepte que peu de connexions à la fois."))
+                return
+            statut.configure(text=_("Connexion à la caméra…"))
+            btn_tester.configure(state="disabled")
+            resultat = []
+
+            def travail():
+                try:
+                    ip, ident, mdp, voie, port = cameras.lire_adresse(adresse)
+                    if not any(cameras._ouvert(ip, port, 3.0) or time.sleep(1) for _i in range(3)):
+                        resultat.append("ferme")
+                        return
+                    acces = "muet"
+                    for _i in range(3):         # la caméra peut être occupée un instant (appli ouverte)
+                        acces = cameras.verifier_acces(ip, port, voie, ident, mdp)
+                        if acces != "muet":
+                            break
+                        time.sleep(1)
+                    if acces == "introuvable":
+                        resultat.append(acces)
+                        return
+                    camera, image = ouvrir_source(adresse)
+                    if camera is not None:
+                        camera.release()
+                    # « refusé » n'est annoncé que si la vraie connexion échoue aussi
+                    resultat.append("refuse" if image is None and acces == "refuse" else image)
+                except Exception:
+                    resultat.append(None)
+            threading.Thread(target=travail, daemon=True).start()
+
+            def fin(image):
+                btn_tester.configure(state="normal")
+                if isinstance(image, str) and image == "refuse":
+                    statut.configure(text=(
+                        _("La caméra refuse cet identifiant et ce mot de passe. Une adresse e-mail est celle du compte "
+                          "Mercusys : il faut le « compte de la caméra », créé à part dans l'appli (Paramètres avancés → "
+                          "Compte de la caméra).") if "@" in v_id.get() else
+                        _("La caméra refuse cet identifiant et ce mot de passe. Utilisez ceux du « compte de la caméra » "
+                          "(Paramètres avancés → Compte de la caméra dans l'appli), en respectant majuscules et minuscules.")))
+                elif isinstance(image, str) and image == "introuvable":
+                    statut.configure(text=_("La caméra ne connaît pas ce chemin de flux : choisissez la marque Mercusys, "
+                                            "ou vérifiez le chemin (stream1 / stream2)."))
+                elif isinstance(image, str):
+                    camera = cameras.lire_adresse(adresse)
+                    statut.configure(text=_("{adresse} ne répond pas sur le port vidéo ({port}) : le "
+                                            "« compte de la caméra » n'est pas encore créé, ou ce n'est pas l'adresse de la "
+                                            "caméra (vérifiez-la dans l'appli : Paramètres de l'appareil → Infos de l'appareil).",
+                                            adresse=camera[0], port=camera[4]))
+                elif image is None:
+                    statut.configure(text=_("Pas d'image : vérifiez l'adresse IP et le compte de la caméra (identifiant "
+                                            "et mot de passe créés dans l'appli, pas ceux du compte Mercusys)."))
+                else:
+                    h, w = image.shape[:2]
+                    petite = cv2.resize(image, (480, int(480 * h / w)))
+                    apercu.image = ImageTk.PhotoImage(Image.fromarray(cv2.cvtColor(petite, cv2.COLOR_BGR2RGB)))
+                    apercu.configure(image=apercu.image, width=480, height=petite.shape[0])
+                    statut.configure(text=_("Image reçue : {largeur}×{hauteur}. Cliquez sur « Utiliser cette caméra ».",
+                                            largeur=w, hauteur=h))
+            attendre(resultat, fin)
+
+        def utiliser():
+            try:
+                adresse = url()
+            except ValueError as e:
+                messagebox.showerror(_("Caméra IP"), _("Impossible : {erreur}", erreur=e), parent=f)
+                return
+            if self.surveillance:
+                messagebox.showinfo(_("Caméra IP"), _("Arrêtez d'abord la surveillance."), parent=f)
+                return
+            ancienne = cle_source(self.cfg["camera_ip"])
+            if ancienne in self.cfg["zones"] and cle_source(adresse) not in self.cfg["zones"]:
+                self.cfg["zones"][cle_source(adresse)] = self.cfg["zones"][ancienne]   # même caméra, nouveau mot de passe
+            self.cfg["source"] = self.cfg["camera_ip"] = adresse
+            self._ecrire_config()
+            self._valeurs_sources()
+            self.var_source.set(libelle_source(adresse))
+            self.lbl_etat.configure(text=_("Caméra choisie : {camera}", camera=libelle_source(adresse)))
+            f.destroy()
+
+        btn_chercher.configure(command=chercher)
+        bas = tk.Frame(f, bg=CARTE)
+        bas.grid(row=9, column=0, columnspan=3, sticky="ew", pady=(12, 0))
+        btn_tester = ttk.Button(bas, text=_("Tester"), command=tester)
+        btn_tester.pack(side="left")
+        ttk.Button(bas, text=_("Utiliser cette caméra"), style="Vert.TButton", command=utiliser).pack(side="right")
+        if not actuelle[0]:
+            chercher()
+
+    def choisir_fenetre(self):
+        """Lecteur d'une caméra ouvert sur le PC (EZVIZ Studio...) : la fenêtre est filmée."""
+        f = tk.Toplevel(self.root, bg=CARTE, padx=16, pady=14)
+        f.title(_("Filmer une fenêtre ouverte"))
+        f.transient(self.root)
+        ttk.Label(f, style="Discret.TLabel", text=_(
+            "La fenêtre doit rester ouverte, pas réduite.\n"
+            "Elle peut être cachée par d'autres : Becquée y trouve seul la vidéo.")).pack(anchor="w", pady=(0, 8))
+        liste = tk.Listbox(f, width=64, height=12, bg=FOND, fg=TEXTE, selectbackground=BLEU, relief="flat",
+                           font=("Segoe UI", 10))
+        liste.pack(fill="both", expand=True)
+        titres = sorted({ti for ti, _h in fenetres.lister_fenetres() if ti not in (self.root.title(), f.title())})
+        for titre in titres:
+            liste.insert("end", titre)
+
+        def valider(_ev=None):
+            if liste.curselection():
+                self.var_source.set(libelle_source(fenetres.PREFIXE_FENETRE + titres[liste.curselection()[0]]))
+                self.lbl_etat.configure(text=_("Fenêtre choisie : cliquez sur « Démarrer » (⛶ Cadrer si elle montre "
+                                               "plusieurs caméras)."))
+                f.destroy()
+
+        liste.bind("<Double-1>", valider)
+        ttk.Button(f, text=_("Choisir"), style="Vert.TButton", command=valider).pack(anchor="e", pady=(10, 0))
+
+    def cadrer(self):
+        """Une fenêtre comme EZVIZ Studio a des boutons et parfois plusieurs caméras : on garde une zone."""
+        if self.surveillance:
+            messagebox.showinfo(_("Cadrer"), _("Arrêtez d'abord la surveillance."))
+            return
+        source = source_depuis_texte(self._saisie_source())
+
+        def travail():
+            camera, image = ouvrir_source(source)
+            if camera is not None:
+                camera.release()
+                self.messages.put(("cadrage", (cle_source(source), image)))
+            else:
+                self.messages.put(("message", _("Aucune image de : {source}", source=masquer(source))))
+
+        self.lbl_etat.configure(text=_("Lecture de la source…"))
+        threading.Thread(target=travail, daemon=True).start()
+
+    def _fenetre_cadrage(self, cle, image):
+        h, w = image.shape[:2]
+        e = min(1100 / w, 700 / h, 1.0)
+        f = tk.Toplevel(self.root, bg=CARTE, padx=12, pady=12)
+        f.title(_("Cadrer : tracez la zone de la mangeoire à la souris"))
+        f.transient(self.root)
+        photo = ImageTk.PhotoImage(Image.fromarray(cv2.cvtColor(cv2.resize(image, (int(w * e), int(h * e))),
+                                                                cv2.COLOR_BGR2RGB)))
+        c = tk.Canvas(f, width=int(w * e), height=int(h * e), highlightthickness=0)
+        c.pack()
+        c.create_image(0, 0, anchor="nw", image=photo)
+        c.image = photo
+        zone = self.cfg["zones"].get(cle) or [0, 0, 1, 1]
+        cadre = c.create_rectangle(*(v * d for v, d in zip(zone, (w * e, h * e, w * e, h * e))), outline=AMBRE, width=3)
+        depart = [0, 0]
+        c.bind("<ButtonPress-1>", lambda ev: depart.__setitem__(slice(None), [ev.x, ev.y]))
+        c.bind("<B1-Motion>", lambda ev: c.coords(cadre, depart[0], depart[1], ev.x, ev.y))
+
+        def retenir(nouvelle):
+            self.cfg["zones"][cle] = nouvelle
+            self.cfg["zones"] = {k: v for k, v in self.cfg["zones"].items() if v}
+            self._ecrire_config()
+            self.lbl_etat.configure(text=_("Cadrage enregistré pour cette source"))
+            f.destroy()
+
+        def valider():
+            x0, y0, x1, y1 = c.coords(cadre)
+            x0, x1 = sorted((max(0, x0), min(w * e, x1)))
+            y0, y1 = sorted((max(0, y0), min(h * e, y1)))
+            if x1 - x0 < 64 or y1 - y0 < 64:
+                messagebox.showerror(_("Cadrer"), _("Zone trop petite."), parent=f)
+                return
+            retenir([x0 / (w * e), y0 / (h * e), x1 / (w * e), y1 / (h * e)])
+
+        bas = tk.Frame(f, bg=CARTE)
+        bas.pack(fill="x", pady=(10, 0))
+        ttk.Button(bas, text=_("Toute l'image"), command=lambda: retenir(None)).pack(side="left")
+        ttk.Button(bas, text=_("Valider la zone"), style="Vert.TButton", command=valider).pack(side="right")
 
     # -------------------------------------------------------------- statistiques
     def statistiques(self):

@@ -8,6 +8,8 @@ Source vidéo :
   - webcam USB            : --source 0
   - smartphone (Android, appli "IP Webcam") : --source http://IP:8080/video
   - flux RTSP             : --source rtsp://...
+  - caméra Wi-Fi (Mercusys, Tapo) : --source rtsp://compte:motdepasse@IP:554/stream1 (voir cameras.py)
+  - fenêtre ouverte       : --source "fenetre:EZVIZ Studio" (une partie du titre suffit, voir fenetres.py)
   - caméra sur Internet   : --source https://www.youtube.com/watch?v=...  (page lue par yt-dlp)
                             ou adresse directe d'un flux (.m3u8...)
   - fichier vidéo         : --source enregistrement.mp4  (analyse a posteriori)
@@ -32,6 +34,7 @@ import argparse
 import csv
 import ipaddress
 import json
+import os
 import threading
 import time
 import unicodedata
@@ -44,8 +47,13 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+import fenetres
 import langues
 from langues import _
+
+# RTSP en TCP : en UDP, les caméras Wi-Fi perdent des paquets et l'image se déchire
+# « stimeout » n'existe plus depuis FFmpeg 5 : « timeout » (µs) borne l'attente d'une caméra muette
+os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rtsp_transport;tcp|timeout;8000000")
 
 MODELE_BIOCLIP = "hf-hub:imageomics/bioclip"
 MODELE_DETECTION = "hustvl/yolos-tiny"
@@ -106,15 +114,62 @@ def resoudre_flux(source):
         return source
 
 
+CLES_SECRETES = ('pwd', 'pass', 'passwd', 'password', 'mdp', 'token', 'key', 'access_token', 'auth', 'apikey',
+                 'api_key', 'secret', 'sig', 'signature')
+
+
+def masquer(source):
+    """Adresse sans son mot de passe : elle s'affiche à l'écran et dans les messages."""
+    source = str(source)
+    if "://" not in source:
+        return source
+    schema, sep, reste = source.partition("://")
+    if sep and "@" in reste:
+        # identifiants : tout ce qui précède le dernier « @ » (un mot de passe peut contenir # ? / @ non
+        # encodés). Mais un « @ » dans le chemin (youtube.com/@chaine) n'en est pas un : avant lui, des
+        # identifiants n'ont pas de « / », sauf un mot de passe (après « : ») qui en contiendrait
+        hote_fin = reste.rfind("@")
+        identifiants, apres = reste[:hote_fin], reste[hote_fin + 1:]
+        if "/" not in identifiants or ":" in identifiants.split("/")[0]:
+            utilisateur = identifiants.split(":", 1)[0] if ":" in identifiants else ""
+            source = f"{schema}://{utilisateur + ':' if utilisateur else ''}•••@{apres}"
+    try:
+        u = urllib.parse.urlsplit(source)
+    except ValueError:                  # adresse malformée : on ne montre rien de risqué
+        return source.split("?", 1)[0].split("@")[-1]
+    if u.query:                         # caméras IP : ?user=admin&pwd=…
+        morceaux = [f"{k}={'•••' if k.lower() in CLES_SECRETES else v}"
+                    for k, v in urllib.parse.parse_qsl(u.query, keep_blank_values=True)]
+        source = source.split("?", 1)[0] + "?" + "&".join(morceaux)
+    return source
+
+
 def ouvrir_source(source):
     """Ouvre la caméra et lit une première image : (capture, image) ou (None, None).
     Webcam : Media Foundation d'abord, puis DirectShow (certaines webcams s'ouvrent
-    sous Media Foundation mais ne renvoient plus d'images)."""
+    sous Media Foundation mais ne renvoient plus d'images).
+    Fenêtre (« fenetre:titre ») : observée quelques secondes pour y trouver la vidéo.
+    Flux réseau : 8 s pour ouvrir, 10 s sans image au plus (une caméra éteinte ne bloque pas 30 s)."""
+    if fenetres.est_fenetre(source):
+        camera = fenetres.CaptureFenetre(source[len(fenetres.PREFIXE_FENETRE):])
+        if not camera.isOpened():
+            return None, None
+        camera.calibrer()
+        ok, image = camera.read()
+        if ok:
+            return camera, image
+        camera.release()
+        return None, None
     if isinstance(source, str):
         source = resoudre_flux(source)
-    essais = [(source, cv2.CAP_MSMF), (source, cv2.CAP_DSHOW)] if isinstance(source, int) else [(source, cv2.CAP_ANY)]
-    for src, api in essais:
-        camera = cv2.VideoCapture(src, api)
+    if isinstance(source, int):
+        essais = [(source, cv2.CAP_MSMF, []), (source, cv2.CAP_DSHOW, [])]
+    elif "://" in source:
+        essais = [(source, cv2.CAP_FFMPEG, [cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 8000, cv2.CAP_PROP_READ_TIMEOUT_MSEC, 10000])]
+    else:
+        essais = [(source, cv2.CAP_ANY, [])]
+    for src, api, proprietes in essais:
+        camera = cv2.VideoCapture(src, api, proprietes)
         if camera.isOpened():
             for _ in range(5):          # certaines webcams renvoient quelques images vides au démarrage
                 ok, image = camera.read()
@@ -944,8 +999,9 @@ class Surveillance:
                  avant=3, apres=4, duree_max=120, analyse_toutes=0.5, reconnaissance=True,
                  reconnaisseur=None, sur_image=None, sur_visite=None, sur_message=None, temps_reel=False,
                  filtre_oiseaux=True, garder_sans_oiseau=False, detecteur_oiseaux=None, ecoute=None,
-                 seuil_chant=0.7, menage_jours=60, menage_go=20.0):
+                 seuil_chant=0.7, menage_jours=60, menage_go=20.0, zone=None):
         self.source = source_depuis_texte(source)
+        self.zone = zone        # (x0, y0, x1, y1) en fractions de l'image : partie gardée (⛶ Cadrer)
         self.flux_web = est_flux_web(self.source)    # le micro du PC n'entend pas ce nid lointain
         self.dossier = Path(dossier)
         self.seuil, self.surface = seuil, surface
@@ -967,6 +1023,14 @@ class Surveillance:
 
     def arreter(self):
         self.arret.set()
+
+    def _cadrer(self, image):
+        if not self.zone:
+            return image
+        h, w = image.shape[:2]
+        x0, y0, x1, y1 = self.zone
+        cadre = image[int(y0 * h):int(y1 * h), int(x0 * w):int(x1 * w)]
+        return cadre if cadre.size else image
 
     def _menage(self):
         n = nettoyer(self.dossier, self.menage_jours, self.menage_go)
@@ -1059,10 +1123,11 @@ class Surveillance:
         if camera is None:
             self.sur_message(_("La source vidéo ne renvoie aucune image : {source} (caméra utilisée par une autre "
                                "application, ou accès refusé dans Paramètres › Confidentialité › Caméra)",
-                               source=self.source))
+                               source=masquer(self.source)))
             return False
         fps = camera.get(cv2.CAP_PROP_FPS)
         fps = fps if 1 < fps < 120 else 15
+        image = self._cadrer(image)
         taille = (image.shape[1], image.shape[0])
         self.sur_message(_("Source ouverte : {largeur}x{hauteur} à {fps} i/s", largeur=taille[0], hauteur=taille[1],
                            fps=f"{fps:.0f}"))
@@ -1093,8 +1158,9 @@ class Surveillance:
                         camera = cv2.VideoCapture()      # capture vide : read() échoue, on réessaie
                         continue
                     camera = nouvelle
-                    if (image.shape[1], image.shape[0]) != taille:
-                        image = cv2.resize(image, taille)
+                image = self._cadrer(image)
+                if (image.shape[1], image.shape[0]) != taille:      # reconnexion, fenêtre redimensionnée
+                    image = cv2.resize(image, taille)
                 nb_lues += 1
                 maintenant = nb_lues / fps if est_fichier else time.time()
                 if est_fichier and self.temps_reel:
@@ -1164,8 +1230,11 @@ class Surveillance:
 # ------------------------------------------------------------------
 def main():
     p = argparse.ArgumentParser(description="Becquée : enregistrement + reconnaissance des oiseaux")
-    p.add_argument("--source", default="0", help="index webcam (0, 1...), URL du flux du smartphone, "
+    p.add_argument("--source", default="0", help="index webcam (0, 1...), URL du flux du smartphone, caméra "
+                                                 "Wi-Fi (rtsp://...), fenêtre ouverte (fenetre:EZVIZ Studio), "
                                                  "page d'une caméra en direct (YouTube...), ou fichier vidéo")
+    p.add_argument("--zone", nargs=4, type=float, metavar=("X0", "Y0", "X1", "Y1"),
+                   help="partie de l'image gardée, en fractions (ex. 0 0 0.5 0.5 : quart en haut à gauche)")
     p.add_argument("--dossier", default="visites", help="dossier des clips, photos et du journal")
     p.add_argument("--modeles", default=str(Path(__file__).resolve().parent / "modeles"),
                    help="dossier des modèles et listes d'espèces (BirdNET, caches)")
@@ -1202,7 +1271,7 @@ def main():
     s = Surveillance(args.source, args.dossier, args.seuil, args.surface, args.avant,
                      args.apres, args.duree_max, args.analyse_toutes, not args.sans_reconnaissance,
                      reconnaisseur=reconnaisseur, sur_message=message, filtre_oiseaux=not args.sans_filtre,
-                     ecoute=ecoute, menage_jours=args.menage_jours, menage_go=args.menage_go)
+                     ecoute=ecoute, menage_jours=args.menage_jours, menage_go=args.menage_go, zone=args.zone)
 
     if args.apercu:
         def apercu(image, etat):
