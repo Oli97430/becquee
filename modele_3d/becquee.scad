@@ -9,8 +9,14 @@
 //  - toit à deux pentes tenu par 4 aimants : remplissage sans outil
 //  - fixation murale (trous de serrure) ou sur poteau Ø25 mm
 //
-//  Pièces (variable piece) — toutes ≤ 256 mm (Centauri Carbon 2) :
+//  Pièces (variable piece) — toutes ≤ 235 mm :
 //    socle, corps, facade, toit, perchoir, cale, support_poteau
+//    améliorations (s'ajoutent sans rien réimprimer) :
+//      fond            écran derrière le perchoir : plus de contre-jour
+//      visiere         auvent au-dessus de la vitre : pas de gouttes devant l'objectif
+//      grille          plancher surélevé à fentes : graines au sec
+//      perchoir_regle  crochets x2 : perchoir à 40, 60, 80 ou 100 mm de la vitre
+//      garde_poteau    cône sous la mangeoire, sur le poteau Ø25 : rats, chats, écureuils
 //    assemblage : vue d'ensemble
 //
 //  Impression : PETG ou ASA (extérieur, UV), 0.2 mm, 4 périmètres,
@@ -22,7 +28,8 @@
 //  Repère : X = largeur, Y+ = avant (vers le perchoir), Z = haut.
 // ============================================================
 
-piece = "assemblage"; // [assemblage, socle, corps, facade, toit, perchoir, cale, support_poteau]
+piece = "assemblage"; // [assemblage, socle, corps, facade, toit, perchoir, cale, support_poteau, fond, visiere, grille, perchoir_regle, garde_poteau]
+ameliorations = true;  // montrer les améliorations dans l'assemblage
 
 /* [Dimensions générales] */
 larg     = 200;   // largeur extérieure du corps
@@ -267,6 +274,115 @@ module support_poteau() {   // repère : plaque en z 0..5 (contre le socle), tub
     }
 }
 
+// ============================================================
+//  Améliorations — repère de l'assemblage ; chaque pièce se pose
+//  sur la mangeoire déjà imprimée, sans vis ni colle
+// ============================================================
+jeu = 0.3;
+poteau_x = larg/2 - 3;          // poteaux du perchoir (socle) : 10 x 10, x ±97, y = y3 - 3
+poteau_y = y3 - 3;
+rebord_av = y3 + 5;             // face avant du rebord du plateau
+
+// Fond : écran mat derrière le perchoir. L'oiseau se détache sur un fond uni au lieu du ciel
+// (contre-jour : un Bulbul de Bourbon sombre pris pour une Perruche à collier) et les feuilles
+// qui bougent derrière ne déclenchent plus d'enregistrement. Deux manchons coiffent les poteaux
+// du perchoir ; une fente laisse passer la barre.
+fond_h = 150;
+fond_e = 3;
+fond_y = rebord_av + jeu;       // dos de l'écran, juste devant le rebord
+module fond() {
+    manchon_y0 = poteau_y - 5 - jeu - 2;
+    difference() {
+        union() {
+            translate([-(larg + 10)/2, fond_y, 0]) cube([larg + 10, fond_e, fond_h]);
+            // nervures au dos (au-dessus du rebord, devant la barre du perchoir)
+            for (x = [-50, 0, 50]) translate([x - 1.5, poteau_y + perch_d/2 + 0.5, 14]) cube([3, fond_y - poteau_y - perch_d/2 - 0.5 + 0.01, fond_h - 14]);
+            for (z = [90, fond_h - 4]) translate([-(larg + 10)/2, poteau_y + perch_d/2 + 0.5, z]) cube([larg + 10, fond_y - poteau_y - perch_d/2 - 0.5 + 0.01, 4]);
+            // manchons des poteaux
+            for (s = [-1, 1]) translate([s*poteau_x - 7.3, manchon_y0, perch_z - 7]) cube([14.6, fond_y - manchon_y0 + 0.01, 17]);
+        }
+        for (s = [-1, 1]) translate([s*poteau_x, poteau_y, 0]) {
+            translate([-5.3, -5.3, perch_z - 8]) cube([10.6, 10.6, perch_z + 8 + jeu - (perch_z - 8)]);   // poteau
+            hull() {                                                   // passage de la barre, par dessous
+                translate([0, 0, perch_z]) rotate([0, 90, 0]) cylinder(d = perch_d + 0.6, h = 20, center = true);
+                translate([0, 0, perch_z - 10]) rotate([0, 90, 0]) cylinder(d = perch_d + 0.6, h = 20, center = true);
+            }
+        }
+    }
+}
+
+// Visière : auvent au-dessus de la vitre, tenu par deux pattes qui pincent l'avant des flancs du
+// corps et descendent jusqu'au plateau. Hors du champ de la caméra (elle vise vers le bas).
+vis_z  = fen_z0 + fen_h + 9;    // au-dessus de l'encadrement gravé de la façade
+vis_av = 28;                    // avancée
+module visiere() {
+    xe = larg/2;                // face extérieure des flancs
+    xi2 = xi - 0.2;             // face intérieure des flancs (jeu)
+    yb = -2.4;                  // derrière : entre la façade et l'avant des flancs
+    for (s = [-1, 1]) mirror([s < 0 ? 1 : 0, 0, 0]) {
+        translate([xe + 0.2, yb, 0]) cube([1.6, 2 - yb, vis_z + 3]);              // mâchoire extérieure
+        translate([xe - 2.2, 0, 0]) cube([4, 2, vis_z + 3]);                       // pont devant le flanc (bas)
+        translate([xi2 - 2.6, 0, 30]) cube([xe + 1.8 - (xi2 - 2.6), 2, vis_z + 3 - 30]);   // pont complet (haut)
+        translate([xi2 - 2.6, yb, 30]) cube([2.6, -yb, vis_z + 3 - 30]);           // mâchoire intérieure
+    }
+    translate([-(xi2 - 2.6), yb, vis_z]) cube([2*(xi2 - 2.6), -yb + 0.01, 3]);    // traverse devant la façade
+    translate([-(xe + 1.8), 0, vis_z]) cube([2*(xe + 1.8), 2, 3]);
+    // auvent incliné de 10° vers l'avant, avec goutte d'eau au bord
+    translate([0, 2, vis_z + 3]) rotate([-10, 0, 0]) {
+        translate([-(xe + 1.8), 0, -2.4]) cube([2*(xe + 1.8), vis_av, 2.4]);
+        translate([-(xe + 1.8), vis_av - 2, -6]) cube([2*(xe + 1.8), 2, 6]);
+    }
+}
+
+// Grille : plancher à fentes posé sur le plateau, 3 mm au-dessus. L'eau file vers les trous
+// de drainage du socle, les graines restent au sec. Rampe à l'arrière : les graines y montent.
+grille_l2 = 198;                // entre les pattes de la visière et les crochets du perchoir
+module grille() {
+    gy0 = 3; gy1 = y3 - 1 - jeu;
+    difference() {
+        union() {
+            translate([-grille_l2/2, gy0, 3]) cube([grille_l2, gy1 - gy0, 2]);
+            for (x = [-88 : 16 : 88], y = [20 : 16 : 116]) translate([x, y, 0]) cylinder(d = 5, h = 3.01);
+            translate([-grille_l2/2, gy0, 0]) rotate([90, 0, 90]) linear_extrude(grille_l2)
+                polygon([[0, 0], [8, 3.01], [8, 5], [0, 0.6]]);
+        }
+        // fentes de 1,8 mm (le millet ne passe pas)
+        for (y = [12 : 5 : gy1 - 4], x = [-84 : 28 : 84]) translate([x - 11, y - 0.9, -1]) cube([22, 1.8, 10]);
+        // encoches des poteaux du perchoir
+        for (s = [-1, 1]) translate([s*poteau_x - 5 - 1, poteau_y - 5 - 1, -1]) cube([12, 20, 10]);
+    }
+}
+
+// Perchoir réglable : deux crochets posés sur les rebords latéraux du plateau. La barre du
+// perchoir (la même) se pose dans l'encoche voulue : 40, 60, 80 ou 100 mm de la vitre au lieu de
+// 120 : l'oiseau est plus grand à l'image, donc mieux reconnu. Une seule pièce, imprimée deux fois.
+crans = [40, 60, 80, 100];
+module perchoir_regle() {
+    x0 = larg/2 + 1; x1 = larg/2 + 7.4;     // le rebord latéral va de x 102 à 105
+    difference() {
+        union() {
+            translate([x0, 30, 12 + 0.2]) cube([x1 - x0, 80, perch_z + 10 - 12.2]);
+            translate([larg/2 + 5.2, 30, 2]) cube([x1 - (larg/2 + 5.2), 80, 10.4]);      // patte extérieure
+        }
+        for (y = crans) hull() {
+            translate([x0 - 1, y, perch_z]) rotate([0, 90, 0]) cylinder(d = perch_d + 0.6, h = 10);
+            translate([x0 - 1, y - (perch_d + 0.6)/2, perch_z + 20]) cube([10, perch_d + 0.6, 1]);
+        }
+    }
+}
+
+// Garde : cône sur le poteau Ø25, sous la mangeoire (ouverture vers le bas) ; un rat ou un chat
+// qui grimpe bute dessous. Bloqué par une vis M4 dans le collier.
+garde_r = 115; garde_h = 105;
+module garde_poteau() {
+    r_trou = poteau_d/2 + 0.25; r_col = r_trou + 8; t = 3.4;
+    difference() {
+        rotate_extrude($fn = 120) polygon([[garde_r - t, 0], [garde_r, 0], [r_col, garde_h], [r_col, garde_h + 30],
+                                           [r_trou, garde_h + 30], [r_trou, garde_h], [r_col - t, garde_h]]);
+        translate([0, 0, garde_h + 18]) rotate([0, 90, 0]) cylinder(d = 3.4, h = 40);      // vis de blocage M4
+    }
+}
+
 // ------------------------------------------------------------
 if      (piece == "socle")          socle();
 else if (piece == "corps")          corps();
@@ -275,12 +391,26 @@ else if (piece == "toit")           toit();
 else if (piece == "perchoir")       translate([-(larg + 8)/2, 0, (perch_d - 1)/2]) perchoir();
 else if (piece == "cale")           rotate([90, 0, 0]) cale();   // face arrière sur le plateau
 else if (piece == "support_poteau") rotate([180, 0, 0]) support_poteau();
+// améliorations, couchées pour l'impression (sans supports)
+else if (piece == "fond")           translate([0, 0, fond_y + fond_e]) rotate([-90, 0, 0]) fond();   // face avant sur le plateau
+else if (piece == "visiere")        translate([0, 0, 2.4]) rotate([90, 0, 0]) visiere();             // dos des pattes sur le plateau
+else if (piece == "grille")         translate([0, 0, 5]) rotate([180, 0, 0]) grille();              // fentes sur le plateau, pieds en l'air
+else if (piece == "perchoir_regle") translate([0, 0, larg/2 + 7.4]) rotate([0, 90, 0]) perchoir_regle();   // face extérieure sur le plateau
+else if (piece == "garde_poteau")   garde_poteau();
 else {
     color("Peru") socle();
     color("Wheat") corps();
     color("SaddleBrown") translate([0, rainure_y, z_plancher]) rotate([90, 0, 0]) translate([0, 0, -fac_ep/2]) facade();
     color("Firebrick") translate([0, 0, h_corps]) toit();
-    color("Sienna") translate([-(larg + 8)/2, y3 - 3, perch_z]) perchoir();
+    color("Sienna") translate([-(larg + 8)/2, ameliorations ? crans[2] : y3 - 3, perch_z]) perchoir();
+    if (ameliorations) {
+        color("DarkOliveGreen") fond();
+        color("SteelBlue") visiere();
+        color("Khaki") grille();
+        color("Chocolate") { perchoir_regle(); mirror([1, 0, 0]) perchoir_regle(); }
+        color("SlateGray") translate([0, (trous_poteau()[0][1] + trous_poteau()[2][1])/2, -200]) garde_poteau();
+        %translate([0, (trous_poteau()[0][1] + trous_poteau()[2][1])/2, -260]) cylinder(d = 25, h = 210);   // poteau
+    }
     color("Olive") translate([-80, y1, z_plancher + 3]) cale();
     color("DimGray") translate([0, 0, -9]) support_poteau();
     // fantôme : smartphone en paysage, incliné contre la cale

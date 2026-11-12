@@ -74,6 +74,18 @@ Testée sur Elegoo Centauri Carbon 2 ; tout plateau de 235 × 235 mm convient (p
 | `becquee_cale.stl` | 1 | à plat — incline l'appareil de 10° vers le perchoir |
 | `becquee_support_poteau.stl` | option | plaque sur le plateau — pour poteau Ø 25 mm |
 
+**Améliorations** : elles se posent sur une mangeoire déjà imprimée, sans vis ni colle.
+
+<p align="center"><img src="modele_3d/apercus/becquee_ameliorations.png" width="420"></p>
+
+| Fichier | Qté | Orientation | À quoi ça sert |
+|---|---|---|---|
+| `becquee_fond.stl` | 1 | face avant sur le plateau | écran derrière le perchoir, coiffe ses deux poteaux : l'oiseau se détache sur un fond uni, plus de contre-jour ni de feuilles qui bougent. Filament mat, vert ou brun ; à retirer par vent fort |
+| `becquee_visiere.stl` | 1 | dos des pattes sur le plateau | auvent au-dessus de la vitre : pas de gouttes devant l'objectif. Ses pattes pincent l'avant des flancs |
+| `becquee_grille.stl` | 1 | fentes sur le plateau | plancher à fentes 3 mm au-dessus du plateau : l'eau s'écoule, les graines restent au sec |
+| `becquee_perchoir_regle.stl` | 2 | face extérieure sur le plateau | crochets sur les rebords du plateau : le perchoir se pose à 40, 60, 80 ou 100 mm de la vitre (120 d'origine). Plus près, l'oiseau est plus grand à l'image |
+| `becquee_garde_poteau.stl` | option | bord large sur le plateau | cône Ø 230 sur le poteau, sous la mangeoire : rats, chats et écureuils ne montent plus. 1 vis M4 de blocage |
+
 **Réglages** : PETG ou ASA (ASA en plein soleil), couches de 0,2 mm, 4 périmètres, sans supports.
 
 **Quincaillerie**
@@ -91,7 +103,7 @@ Testée sur Elegoo Centauri Carbon 2 ; tout plateau de 235 × 235 mm convient (p
 openscad -o becquee_corps.stl -D "piece=\"corps\"" modele_3d/becquee.scad
 ```
 
-Pièces : `socle`, `corps`, `facade`, `toit`, `perchoir`, `cale`, `support_poteau`.
+Pièces : `socle`, `corps`, `facade`, `toit`, `perchoir`, `cale`, `support_poteau`, et les améliorations `fond`, `visiere`, `grille`, `perchoir_regle`, `garde_poteau`.
 
 ---
 

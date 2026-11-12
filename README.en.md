@@ -76,6 +76,18 @@ Tested on an Elegoo Centauri Carbon 2; any 235 × 235 mm bed works (largest part
 | `becquee_cale.stl` (wedge) | 1 | flat — tilts the device 10° toward the perch |
 | `becquee_support_poteau.stl` (pole mount) | optional | plate on the bed — for a 25 mm pole |
 
+**Upgrades**: they fit on an already printed feeder, without screws or glue.
+
+<p align="center"><img src="modele_3d/apercus/becquee_ameliorations.png" width="420"></p>
+
+| File | Qty | Orientation | What it does |
+|---|---|---|---|
+| `becquee_fond.stl` (backdrop) | 1 | front face on the bed | screen behind the perch, caps its two posts: the bird stands out on a plain background, no more backlight or moving leaves. Matte filament, green or brown; take it off in strong wind |
+| `becquee_visiere.stl` (visor) | 1 | back of the legs on the bed | awning over the window: no raindrops in front of the lens. Its legs clip on the front of the side walls |
+| `becquee_grille.stl` (grate) | 1 | slots on the bed | slotted floor 3 mm above the tray: water drains, seeds stay dry |
+| `becquee_perchoir_regle.stl` (perch hooks) | 2 | outer face on the bed | hooks on the tray rims: the perch sits 40, 60, 80 or 100 mm from the window (120 originally). Closer, the bird is bigger in the image |
+| `becquee_garde_poteau.stl` (pole baffle) | optional | wide rim on the bed | 230 mm cone on the pole, below the feeder: rats, cats and squirrels can't climb. 1 M4 locking screw |
+
 **Settings**: PETG or ASA (ASA in full sun), 0.2 mm layers, 4 walls, no supports.
 
 **Hardware**
@@ -93,7 +105,7 @@ Tested on an Elegoo Centauri Carbon 2; any 235 × 235 mm bed works (largest part
 openscad -o becquee_corps.stl -D "piece=\"corps\"" modele_3d/becquee.scad
 ```
 
-Parts: `socle`, `corps`, `facade`, `toit`, `perchoir`, `cale`, `support_poteau` (or `assemblage` for the assembled view).
+Parts: `socle`, `corps`, `facade`, `toit`, `perchoir`, `cale`, `support_poteau`, upgrades `fond`, `visiere`, `grille`, `perchoir_regle`, `garde_poteau` (or `assemblage` for the assembled view).
 
 ---
 
