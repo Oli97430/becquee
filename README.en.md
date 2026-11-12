@@ -87,6 +87,7 @@ Tested on an Elegoo Centauri Carbon 2; any 235 × 235 mm bed works (largest part
 | `becquee_grille.stl` (grate) | 1 | slots on the bed | slotted floor 3 mm above the tray: water drains, seeds stay dry |
 | `becquee_perchoir_regle.stl` (perch hooks) | 2 | outer face on the bed | hooks on the tray rims: the perch sits 40, 60, 80 or 100 mm from the window (120 originally). Closer, the bird is bigger in the image |
 | `becquee_garde_poteau.stl` (pole baffle) | optional | wide rim on the bed | 230 mm cone on the pole, below the feeder: rats, cats and squirrels can't climb. 1 M4 locking screw |
+| `becquee_bras_mc510.stl` + `becquee_bras_mc510_bride.stl` (camera arm) | optional | standing, as is | 17 cm arm clamped on the 25 mm pole (4 M4 × 16 screws + nuts) for a **Mercusys MC510** Wi-Fi camera: stick the template supplied with the camera on the plate, drill 2.5 mm, screw on its original bracket. Print the plate solid (100% infill) |
 
 **Settings**: PETG or ASA (ASA in full sun), 0.2 mm layers, 4 walls, no supports.
 
@@ -105,7 +106,7 @@ Tested on an Elegoo Centauri Carbon 2; any 235 × 235 mm bed works (largest part
 openscad -o becquee_corps.stl -D "piece=\"corps\"" modele_3d/becquee.scad
 ```
 
-Parts: `socle`, `corps`, `facade`, `toit`, `perchoir`, `cale`, `support_poteau`, upgrades `fond`, `visiere`, `grille`, `perchoir_regle`, `garde_poteau` (or `assemblage` for the assembled view).
+Parts: `socle`, `corps`, `facade`, `toit`, `perchoir`, `cale`, `support_poteau`, upgrades `fond`, `visiere`, `grille`, `perchoir_regle`, `garde_poteau`, `bras_mc510`, `bras_mc510_bride` (or `assemblage` for the assembled view).
 
 ---
 

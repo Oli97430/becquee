@@ -17,6 +17,9 @@
 //      grille          plancher surélevé à fentes : graines au sec
 //      perchoir_regle  crochets x2 : perchoir à 40, 60, 80 ou 100 mm de la vitre
 //      garde_poteau    cône sous la mangeoire, sur le poteau Ø25 : rats, chats, écureuils
+//      bras_mc510 + bras_mc510_bride  bras serré sur le poteau Ø25 (4 vis M4 x 16 + écrous)
+//                      pour une caméra Wi-Fi Mercusys MC510 : son support d'origine se visse
+//                      sur la plaque (gabarit autocollant fourni avec la caméra, avant-trous Ø2,5)
 //    assemblage : vue d'ensemble
 //
 //  Impression : PETG ou ASA (extérieur, UV), 0.2 mm, 4 périmètres,
@@ -28,7 +31,7 @@
 //  Repère : X = largeur, Y+ = avant (vers le perchoir), Z = haut.
 // ============================================================
 
-piece = "assemblage"; // [assemblage, socle, corps, facade, toit, perchoir, cale, support_poteau, fond, visiere, grille, perchoir_regle, garde_poteau]
+piece = "assemblage"; // [assemblage, socle, corps, facade, toit, perchoir, cale, support_poteau, fond, visiere, grille, perchoir_regle, garde_poteau, bras_mc510, bras_mc510_bride]
 ameliorations = true;  // montrer les améliorations dans l'assemblage
 
 /* [Dimensions générales] */
@@ -383,6 +386,53 @@ module garde_poteau() {
     }
 }
 
+// Bras pour caméra Mercusys MC510 (orientable : elle vise seule la mangeoire). Collier en deux
+// moitiés serrées sur le poteau par 4 vis M4 : il se pose sans démonter la mangeoire. Au bout,
+// une plaque pleine où se visse le support d'origine de la caméra : coller le gabarit fourni
+// dans la boîte, percer à Ø2,5 et visser les vis de la caméra (plaque imprimée pleine).
+// Repère : axe du poteau = Z, bras vers +X ; imprimé debout tel quel, sans supports.
+bras_l = 170;                   // de l'axe du poteau à la face de la plaque
+bras_h = 80;                    // hauteur du collier, du bras et de la plaque
+plaque_l = 100;                 // largeur de la plaque (le support MC510 y tient)
+plaque_e = 8;
+col_ri = poteau_d/2;            // 12,75 : poteau Ø25 + jeu
+col_re = col_ri + 6;
+oreille = col_re + 12;          // bout des oreilles de serrage
+vis_y = col_re + 5.5;           // axe des vis M4, de chaque côté
+module demi_collier(oreilles_ecrou = false) {
+    difference() {
+        union() {
+            intersection() {
+                cylinder(r = col_re, h = bras_h, $fn = 80);
+                translate([0.5, -col_re, -1]) cube([col_re, 2*col_re, bras_h + 2]);
+            }
+            for (s = [-1, 1]) translate([0.5, s > 0 ? col_ri + 1 : -oreille, 0]) cube([7, oreille - col_ri - 1, bras_h]);
+        }
+        translate([0, 0, -1]) cylinder(r = col_ri, h = bras_h + 2, $fn = 80);
+        for (s = [-1, 1], z = [16, bras_h - 16]) translate([-1, s*vis_y, z]) rotate([0, 90, 0]) {
+            cylinder(d = 4.4, h = 20);
+            if (oreilles_ecrou) translate([0, 0, 4.5]) cylinder(d = 8.1, h = 10, $fn = 6);   // écrou M4 (bride)
+            else translate([0, 0, 6]) cylinder(d = 8, h = 10);                              // tête de vis
+        }
+    }
+}
+module bras_mc510() {
+    demi_collier();
+    difference() {
+        union() {
+            translate([col_re - 2, -8, 0]) cube([bras_l - (col_re - 2) + 0.01, 16, bras_h]);              // âme du bras
+            translate([bras_l, -plaque_l/2, 0]) cube([plaque_e, plaque_l, bras_h]);                       // plaque
+            for (s = [-1, 1]) hull() {                                                                    // goussets
+                translate([bras_l - 0.01, s > 0 ? 7 : -32, 0]) cube([0.01, 25, bras_h]);
+                translate([bras_l - 40, s > 0 ? 7 : -8, 0]) cube([0.01, 1, bras_h]);
+            }
+        }
+        translate([bras_l + plaque_e - 0.6, 0, bras_h/2]) rotate([90, 0, 90]) linear_extrude(1)       // repère du centre
+            square([30, 0.8], center = true);
+    }
+}
+module bras_mc510_bride() { mirror([1, 0, 0]) demi_collier(oreilles_ecrou = true); }
+
 // ------------------------------------------------------------
 if      (piece == "socle")          socle();
 else if (piece == "corps")          corps();
@@ -397,6 +447,8 @@ else if (piece == "visiere")        translate([0, 0, 2.4]) rotate([90, 0, 0]) vi
 else if (piece == "grille")         translate([0, 0, 5]) rotate([180, 0, 0]) grille();              // fentes sur le plateau, pieds en l'air
 else if (piece == "perchoir_regle") translate([0, 0, larg/2 + 7.4]) rotate([0, 90, 0]) perchoir_regle();   // face extérieure sur le plateau
 else if (piece == "garde_poteau")   garde_poteau();
+else if (piece == "bras_mc510")     bras_mc510();
+else if (piece == "bras_mc510_bride") bras_mc510_bride();
 else {
     color("Peru") socle();
     color("Wheat") corps();
