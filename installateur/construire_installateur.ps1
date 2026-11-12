@@ -49,7 +49,8 @@ if ($LASTEXITCODE) { throw "installation des bibliothèques impossible" }
 
 # 3. Application
 Etape "Application"
-foreach ($f in "mangeoire_app.py", "mangeoire_cam.py", "chants_complement.py", "langues.py", "becquee.ico", "becquee.png",
+foreach ($f in "mangeoire_app.py", "mangeoire_cam.py", "chants_complement.py", "langues.py", "cameras.py", "fenetres.py",
+               "becquee.ico", "becquee.png",
                "becquee_titre.png", "requirements.txt") {
     Copy-Item (Join-Path $logiciel $f) $app -Force
 }
